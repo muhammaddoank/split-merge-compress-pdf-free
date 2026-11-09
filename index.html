@@ -144,6 +144,26 @@
             border-radius: 4px;
             transition: width 0.3s;
         }
+
+        /* Banner Informasi Privasi & Keamanan Offline */
+        .privacy-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: #f0fdf4;
+            border-bottom: 1px solid #bbf7d0;
+            padding: 0.75rem 1.25rem;
+            color: #166534;
+            font-size: 0.825rem;
+            line-height: 1.45;
+        }
+        .privacy-banner-icon {
+            flex-shrink: 0;
+            color: #16a34a;
+        }
+        .privacy-banner-text strong {
+            color: #14532d;
+        }
     </style>
 </head>
 <body>
@@ -153,6 +173,17 @@
         <button class="tab-btn" onclick="switchTab('split')">Split</button>
         <button class="tab-btn" onclick="switchTab('merge')">Merge & Reorder</button>
         <button class="tab-btn active" onclick="switchTab('compress')">Kompres & DPI</button>
+    </div>
+
+    <!-- Info Privasi & Keamanan Offline -->
+    <div class="privacy-banner">
+        <svg class="privacy-banner-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+        </svg>
+        <div class="privacy-banner-text">
+            <strong>Keamanan &amp; Privasi Terjamin:</strong> Aplikasi ini beroperasi sepenuhnya secara <em>offline</em> langsung di peramban (browser) Anda. Dokumen yang Anda proses tidak pernah diunggah atau dikirim ke server mana pun, sehingga kerahasiaan data Anda tetap terlindungi.
+        </div>
     </div>
 
     <!-- TAB: SPLIT -->
@@ -225,10 +256,16 @@
     let dragSourceElement = null;
 
     // --- TABS & DROPZONES ---
-    function switchTab(tabName) {
+    function switchTab(tabName, evt) {
+        const ev = evt || window.event;
         document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(`tab-${tabName}`).classList.add('active');
-        event.currentTarget.classList.add('active');
+        if (ev && ev.currentTarget) {
+            ev.currentTarget.classList.add('active');
+        } else {
+            const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(`'${tabName}'`));
+            if (btn) btn.classList.add('active');
+        }
     }
 
     function setupDropZone(id, isMultiple, onFilesDropped) {
