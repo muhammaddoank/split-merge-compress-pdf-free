@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline PDF Tools: Split, Merge & Compress</title>
+    <!-- Library untuk Split & Merge -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <!-- Library untuk Rendering & Kompresi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f3f4f6;
+            --surface: #ffffff;
+            --border: #e5e7eb;
+            --text: #1f2937;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background-color: var(--surface);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 700px;
+            overflow: hidden;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            background: none;
+            font-weight: 600;
+            cursor: pointer;
+            color: #6b7280;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            background-color: #eff6ff;
+        }
+        .tab-content { display: none; padding: 1.5rem; }
+        .tab-content.active { display: block; }
+        
+        .drop-zone {
+            border: 2px dashed #9ca3af;
+            border-radius: 6px;
+            padding: 2rem 1rem;
+            text-align: center;
+            color: #4b5563;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 1rem;
+        }
+        .drop-zone.dragover { background-color: #eff6ff; border-color: var(--primary); }
+        
+        .input-group { margin-bottom: 1.2rem; }
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .input-group small {
+            display: block;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+        }
+        input[type="text"], select, input[type="range"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .range-value {
+            display: inline-block;
+            font-weight: bold;
+            color: var(--primary);
+            margin-left: 10px;
+        }
+        
+        button.action-btn {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button.action-btn:hover { background-color: var(--primary-hover); }
+        button.action-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        
+        /* CSS List Merge (Sama seperti versi sebelumnya) */
+        ul.page-list { list-style: none; padding: 0; margin-bottom: 1rem; max-height: 350px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; background: #f9fafb; scroll-behavior: smooth; }
+        ul.page-list li { display: flex; align-items: center; background: var(--surface); padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; cursor: grab; gap: 10px; }
+        ul.page-list li:last-child { border-bottom: none; }
+        .drag-handle { color: #9ca3af; font-size: 1.2rem; }
+        .page-badge { background-color: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; min-width: 25px; text-align: center; }
+        .page-info { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .btn-sm { background: #e5e7eb; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+        .btn-sm:hover { background: #d1d5db; }
+        .remove-btn { background: #fee2e2; color: #dc2626; }
+        
+        .alert-warning {
+            background-color: #fffbeb;
+            color: #b45309;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            border: 1px solid #fde68a;
+        }
+        
+        #progress-container {
+            display: none;
+            margin-top: 1rem;
+        }
+        #progress-bar {
+            height: 8px;
+            background-color: var(--primary);
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="tabs">
+        <button class="tab-btn" onclick="switchTab('split')">Split</button>
+        <button class="tab-btn" onclick="switchTab('merge')">Merge & Reorder</button>
+        <button class="tab-btn active" onclick="switchTab('compress')">Kompres & DPI</button>
+    </div>
+
+    <!-- TAB: SPLIT -->
+    <div id="tab-split" class="tab-content">
+        <div id="dropzone-split" class="drop-zone">Drag & Drop 1 File PDF di sini</div>
+        <div id="split-file-info" style="margin-bottom: 1rem; color: var(--primary); font-size: 0.85rem;">Belum ada file terpilih</div>
+        <div class="input-group">
+            <label>Rentang Halaman (misal: 1, 3-5, 8)</label>
+            <input type="text" id="split-range" placeholder="1, 3-5">
+        </div>
+        <button class="action-btn" onclick="processSplit()">Ekstrak Halaman</button>
+    </div>
+
+    <!-- TAB: MERGE & REORDER -->
+    <div id="tab-merge" class="tab-content">
+        <div id="dropzone-merge" class="drop-zone">Drag & Drop File PDF di sini</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <div id="total-pages-info" style="font-size: 0.85rem; font-weight: 600;"></div>
+            <button id="clear-merge-btn" class="btn-sm remove-btn" style="display: none;" onclick="clearMergeWorkspace()">Bersihkan Area</button>
+        </div>
+        <ul id="merge-page-list" class="page-list"></ul>
+        <button class="action-btn" onclick="processMergeReorder()">Gabungkan PDF</button>
+    </div>
+
+    <!-- TAB: COMPRESS -->
+    <div id="tab-compress" class="tab-content active">
+        <div class="alert-warning">
+            <strong>Catatan Sistem Offline:</strong> Fitur kompresi ini bekerja dengan meratakan PDF menjadi format gambar (Flattening). 
+            Ini akan sangat mengecilkan ukuran file, namun teks di dalam PDF tidak akan bisa diblok atau disalin lagi.
+        </div>
+        
+        <div id="dropzone-compress" class="drop-zone">Drag & Drop 1 File PDF untuk Dikompres</div>
+        <div id="compress-file-info" style="margin-bottom: 1rem; color: var(--primary); font-size: 0.85rem;">Belum ada file terpilih</div>
+        
+        <div class="input-group">
+            <label>Kerapatan Pixel (DPI)</label>
+            <small>Menentukan ketajaman resolusi. Makin kecil angka, makin buram tapi file makin kecil.</small>
+            <select id="compress-dpi">
+                <option value="72">72 DPI - Kualitas Web/Layar Rendah (Ukuran Paling Kecil)</option>
+                <option value="150" selected>150 DPI - Kualitas Standar/Dokumen (Rekomendasi)</option>
+                <option value="300">300 DPI - Kualitas Cetak Printer (Ketajaman Tinggi)</option>
+            </select>
+        </div>
+        
+        <div class="input-group">
+            <label>Kualitas Kompresi Gambar: <span id="quality-val" class="range-value">70%</span></label>
+            <small>Menurunkan kualitas gambar JPEG yang dihasilkan.</small>
+            <input type="range" id="compress-quality" min="10" max="100" value="70" oninput="document.getElementById('quality-val').textContent = this.value + '%'">
+        </div>
+        
+        <div id="progress-container">
+            <div style="font-size: 0.8rem; margin-bottom: 5px; color: #4b5563;" id="progress-text">Memproses: 0%</div>
+            <div style="background-color: #e5e7eb; border-radius: 4px; width: 100%;">
+                <div id="progress-bar"></div>
+            </div>
+        </div>
+        
+        <button id="btn-compress" class="action-btn" style="margin-top: 1rem;" onclick="processCompress()">Kompres PDF</button>
+    </div>
+</div>
+
+<script>
+    // --- SETUP PDF.JS WORKER UNTUK RENDERING COMPRESS ---
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // --- STATE MANAGEMENT ---
+    let splitFile = null;
+    let compressFile = null;
+    let pdfDocumentsCache = [];
+    let dragSourceElement = null;
+
+    // --- TABS & DROPZONES ---
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    function setupDropZone(id, isMultiple, onFilesDropped) {
+        const zone = document.getElementById(id);
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+        zone.addEventListener('dragleave', e => { e.preventDefault(); zone.classList.remove('dragover'); });
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('dragover');
+            const pdfFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
+            if (pdfFiles.length > 0) onFilesDropped(pdfFiles);
+            else alert('Harap masukkan file PDF.');
+        });
+        zone.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = 'application/pdf'; input.multiple = isMultiple;
+            input.onchange = e => {
+                const pdfFiles = Array.from(e.target.files).filter(f => f.type === 'application/pdf');
+                if (pdfFiles.length > 0) onFilesDropped(pdfFiles);
+            };
+            input.click();
+        });
+    }
+
+    // Init Dropzones
+    setupDropZone('dropzone-split', false, files => { splitFile = files[0]; document.getElementById('split-file-info').textContent = `File aktif: ${splitFile.name}`; });
+    setupDropZone('dropzone-compress', false, files => { compressFile = files[0]; document.getElementById('compress-file-info').textContent = `File aktif: ${compressFile.name}`; });
+    setupDropZone('dropzone-merge', true, async files => {
+        const listContainer = document.getElementById('merge-page-list');
+        document.getElementById('clear-merge-btn').style.display = 'inline-block';
+
+        for (const file of files) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+            const docId = pdfDocumentsCache.length;
+            pdfDocumentsCache.push(pdfDoc);
+
+            for (let i = 0; i < pdfDoc.getPageCount(); i++) {
+                const li = document.createElement('li');
+                li.draggable = true; li.dataset.docId = docId; li.dataset.pageIndex = i;
+                li.innerHTML = `
+                    <span class="drag-handle">☰</span>
+                    <span class="page-badge"></span>
+                    <span class="page-info">${file.name} <strong>(Hal. ${i + 1})</strong></span>
+                    <div>
+                        <button class="btn-sm" onclick="moveToTop(this)">⇈</button>
+                        <button class="btn-sm" onclick="moveToPos(this)">⇅</button>
+                        <button class="btn-sm" onclick="moveToBottom(this)">⇊</button>
+                        <button class="btn-sm remove-btn" onclick="removePage(this)">×</button>
+                    </div>
+                `;
+                addDragEvents(li);
+                listContainer.appendChild(li);
+            }
+        }
+        updatePageNumbers();
+    });
+
+    // --- FUNGSI MERGE (Sama seperti sebelumnya) ---
+    function updatePageNumbers() {
+        const listItems = document.querySelectorAll('#merge-page-list li');
+        listItems.forEach((item, index) => item.querySelector('.page-badge').textContent = '#' + (index + 1));
+        document.getElementById('total-pages-info').textContent = listItems.length > 0 ? `Total: ${listItems.length} Halaman` : '';
+    }
+    function clearMergeWorkspace() {
+        document.getElementById('merge-page-list').innerHTML = '';
+        document.getElementById('clear-merge-btn').style.display = 'none';
+        document.getElementById('total-pages-info').textContent = '';
+        pdfDocumentsCache = [];
+    }
+    function moveToTop(btn) { const li = btn.closest('li'); li.parentNode.prepend(li); updatePageNumbers(); li.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    function moveToBottom(btn) { const li = btn.closest('li'); li.parentNode.append(li); updatePageNumbers(); li.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    function removePage(btn) { btn.closest('li').remove(); updatePageNumbers(); }
+    function moveToPos(btn) {
+        const li = btn.closest('li'); const list = li.parentNode; const total = list.children.length;
+        let target = prompt(`Pindah ke urutan berapa? (1 - ${total})`);
+        if (!target) return; target = parseInt(target);
+        if (isNaN(target) || target < 1 || target > total) return alert('Angka tidak valid!');
+        list.removeChild(li);
+        if (target === 1) list.prepend(li); else if (target >= total) list.append(li);
+        else list.insertBefore(li, list.children[target - 1]);
+        updatePageNumbers(); li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function addDragEvents(item) {
+        item.addEventListener('dragstart', function(e) { dragSourceElement = this; this.style.opacity = '0.5'; });
+        item.addEventListener('dragover', function(e) { e.preventDefault(); return false; });
+        item.addEventListener('drop', function(e) {
+            e.stopPropagation();
+            if (dragSourceElement !== this) {
+                const list = this.parentNode;
+                const draggedIdx = Array.from(list.children).indexOf(dragSourceElement);
+                const targetIdx = Array.from(list.children).indexOf(this);
+                if (draggedIdx < targetIdx) list.insertBefore(dragSourceElement, this.nextSibling);
+                else list.insertBefore(dragSourceElement, this);
+            }
+            return false;
+        });
+        item.addEventListener('dragend', function(e) { this.style.opacity = '1'; updatePageNumbers(); });
+    }
+
+    async function processSplit() {
+        if (!splitFile) return alert('Masukkan file PDF.');
+        const range = document.getElementById('split-range').value; if (!range) return alert('Masukkan rentang.');
+        
+        const arrayBuffer = await splitFile.arrayBuffer();
+        const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+        const maxPages = pdfDoc.getPageCount();
+        
+        const pagesToKeep = new Set();
+        for (let part of range.split(',')) {
+            part = part.trim();
+            if (part.includes('-')) {
+                const [start, end] = part.split('-').map(n => parseInt(n));
+                for (let i = start; i <= end; i++) if (i >= 1 && i <= maxPages) pagesToKeep.add(i - 1);
+            } else {
+                const num = parseInt(part);
+                if (num >= 1 && num <= maxPages) pagesToKeep.add(num - 1);
+            }
+        }
+        
+        const indices = Array.from(pagesToKeep).sort((a, b) => a - b);
+        if (indices.length === 0) return alert('Rentang tidak valid.');
+
+        const newPdf = await PDFLib.PDFDocument.create();
+        const copiedPages = await newPdf.copyPages(pdfDoc, indices);
+        copiedPages.forEach(p => newPdf.addPage(p));
+        downloadFile(await newPdf.save(), `Split_${splitFile.name}`);
+    }
+
+    async function processMergeReorder() {
+        const items = document.querySelectorAll('#merge-page-list li');
+        if (items.length === 0) return alert('Area kerja kosong.');
+        const btn = event.target; btn.textContent = 'Memproses...'; btn.disabled = true;
+
+        try {
+            const mergedPdf = await PDFLib.PDFDocument.create();
+            for (const item of items) {
+                const docId = parseInt(item.dataset.docId);
+                const pageIndex = parseInt(item.dataset.pageIndex);
+                const [copiedPage] = await mergedPdf.copyPages(pdfDocumentsCache[docId], [pageIndex]);
+                mergedPdf.addPage(copiedPage);
+            }
+            downloadFile(await mergedPdf.save(), 'Merged_Custom.pdf');
+        } catch (e) { alert('Gagal: ' + e.message); } 
+        finally { btn.textContent = 'Gabungkan PDF'; btn.disabled = false; }
+    }
+
+    // --- FUNGSI BARU: PROSES KOMPRESI (PDF.js -> Canvas -> PDF-Lib) ---
+    async function processCompress() {
+        if (!compressFile) return alert('Silakan masukkan file PDF untuk dikompres.');
+        
+        const btn = document.getElementById('btn-compress');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        
+        const dpi = parseInt(document.getElementById('compress-dpi').value);
+        const quality = parseInt(document.getElementById('compress-quality').value) / 100;
+        
+        btn.disabled = true;
+        btn.textContent = "Memproses Kompresi...";
+        progressContainer.style.display = "block";
+        progressBar.style.width = "0%";
+        
+        try {
+            const arrayBuffer = await compressFile.arrayBuffer();
+            
+            // 1. Load PDF menggunakan PDF.js
+            const loadingTask = pdfjsLib.getDocument({data: new Uint8Array(arrayBuffer)});
+            const pdfJsDoc = await loadingTask.promise;
+            const totalPages = pdfJsDoc.numPages;
+            
+            // 2. Buat dokumen PDF baru menggunakan PDF-Lib
+            const newPdf = await PDFLib.PDFDocument.create();
+            
+            // Canvas untuk merender gambar (dibuat di background, tidak dimunculkan di HTML)
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Base scale PDF biasanya dihitung dari 72 DPI. 
+            // Jadi jika user milih 150 DPI, scale-nya adalah 150/72 = ~2.08
+            const scale = dpi / 72;
+
+            // 3. Loop setiap halaman
+            for (let i = 1; i <= totalPages; i++) {
+                // Update UI Progress
+                const percent = Math.round(((i - 1) / totalPages) * 100);
+                progressBar.style.width = percent + '%';
+                progressText.textContent = `Merender halaman ${i} dari ${totalPages}...`;
+                
+                const page = await pdfJsDoc.getPage(i);
+                
+                // Ambil ukuran canvas sesuai DPI yang dipilih (Gambar resolusi tinggi/rendah)
+                const viewportCanvas = page.getViewport({ scale: scale });
+                canvas.width = viewportCanvas.width;
+                canvas.height = viewportCanvas.height;
+                
+                // Render halaman PDF ke dalam canvas
+                await page.render({ canvasContext: ctx, viewport: viewportCanvas }).promise;
+                
+                // Konversi canvas menjadi gambar JPEG yang dikompres
+                const imgDataUrl = canvas.toDataURL('image/jpeg', quality);
+                
+                // Embed gambar JPEG ke dalam dokumen PDF-Lib baru
+                const jpgImage = await newPdf.embedJpg(imgDataUrl);
+                
+                // Dapatkan ukuran ASLI dari halaman PDF (selalu gunakan scale 1 untuk ukuran dokumen fisik)
+                const viewportOriginal = page.getViewport({ scale: 1 });
+                const newPage = newPdf.addPage([viewportOriginal.width, viewportOriginal.height]);
+                
+                // Gambar/Tempel hasil render ke dalam PDF baru yang ukurannya sama persis dengan aslinya
+                newPage.drawImage(jpgImage, {
+                    x: 0,
+                    y: 0,
+                    width: viewportOriginal.width,
+                    height: viewportOriginal.height,
+                });
+            }
+            
+            // Finalisasi
+            progressBar.style.width = '100%';
+            progressText.textContent = "Menyimpan file hasil kompresi...";
+            
+            // Simpan dan unduh
+            const pdfBytes = await newPdf.save();
+            downloadFile(pdfBytes, `Compressed_${compressFile.name}`);
+            
+        } catch (error) {
+            console.error(error);
+            alert('Terjadi kesalahan saat mengkompres PDF: ' + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Kompres PDF";
+            setTimeout(() => { progressContainer.style.display = "none"; }, 3000);
+        }
+    }
+
+    // --- HELPER DOWNLOAD ---
+    function downloadFile(bytes, filename) {
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+</script>
+
+</body>
+</html>
