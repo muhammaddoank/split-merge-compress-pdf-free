@@ -11,6 +11,7 @@ Aplikasi web pengolah dokumen PDF yang berjalan secara 100% offline langsung di 
 6. Watermark Teks: Menambahkan cap stempel teks (contoh: RAHASIA, CONFIDENTIAL, DRAF, SALINAN, dll.) dengan pengaturan rotasi diagonal/horizontal/header/footer, warna, opasitas, dan ukuran font.
 7. Konversi PDF ke Gambar: Mengekspor setiap halaman PDF menjadi format gambar (JPG atau PNG) beresolusi tinggi, dengan opsi unduh satu per satu maupun sekaligus dalam format .ZIP.
 8. Konversi Gambar ke PDF: Menggabungkan berbagai gambar (JPG, PNG, WebP) menjadi satu dokumen PDF rapi dengan pilihan ukuran kertas (Ukuran Asli, A4 Portrait, A4 Landscape) dan margin.
+9. Offline Cache & PWA: Dilengkapi Service Worker sehingga seluruh aset dan pustaka tersimpan di memori browser secara otomatis. Setelah dibuka satu kali, aplikasi dapat diakses kapan saja secara instan tanpa internet serta dapat diinstal di desktop atau ponsel.
 
 ## Cara Menggunakan:
 Cukup buka file index.html langsung di browser favorit Anda (Google Chrome, Mozilla Firefox, Microsoft Edge, Safari, dll.) tanpa perlu menginstal aplikasi tambahan atau koneksi internet.
