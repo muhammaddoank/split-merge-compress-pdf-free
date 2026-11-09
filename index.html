@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offline PDF Tools: Split, Merge & Compress</title>
-    <!-- Library untuk Split & Merge -->
+    <title>Offline PDF Tools: Split, Merge, Kompres, Edit, Watermark & Konversi</title>
+    <!-- Library untuk Manipulasi PDF (Split, Merge, Rotate, Delete, Watermark, Image to PDF) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-    <!-- Library untuk Rendering & Kompresi -->
+    <!-- Library untuk Rendering & Kompresi (PDF to Canvas/Images) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Library untuk Packaging Gambar ke ZIP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
     <style>
         :root {
@@ -17,143 +19,71 @@
             --surface: #ffffff;
             --border: #e5e7eb;
             --text: #1f2937;
+            --text-muted: #6b7280;
+            --danger: #dc2626;
+            --danger-bg: #fee2e2;
+            --success-bg: #f0fdf4;
+            --success-border: #bbf7d0;
+            --success-text: #166534;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
             color: var(--text);
             margin: 0;
-            padding: 2rem;
+            padding: 2rem 1rem;
             display: flex;
             justify-content: center;
         }
         .container {
             background-color: var(--surface);
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
             width: 100%;
-            max-width: 700px;
+            max-width: 780px;
             overflow: hidden;
         }
         .tabs {
             display: flex;
             border-bottom: 1px solid var(--border);
             overflow-x: auto;
+            scrollbar-width: thin;
+            background-color: #f9fafb;
         }
         .tab-btn {
-            flex: 1;
-            padding: 1rem;
+            flex: 0 0 auto;
+            padding: 0.9rem 1.1rem;
             border: none;
+            border-bottom: 2px solid transparent;
             background: none;
             font-weight: 600;
+            font-size: 0.85rem;
             cursor: pointer;
-            color: #6b7280;
+            color: var(--text-muted);
             transition: all 0.2s;
             white-space: nowrap;
+        }
+        .tab-btn:hover {
+            color: var(--primary);
+            background-color: #f3f4f6;
         }
         .tab-btn.active {
             color: var(--primary);
             border-bottom: 2px solid var(--primary);
-            background-color: #eff6ff;
+            background-color: var(--surface);
         }
         .tab-content { display: none; padding: 1.5rem; }
         .tab-content.active { display: block; }
         
-        .drop-zone {
-            border: 2px dashed #9ca3af;
-            border-radius: 6px;
-            padding: 2rem 1rem;
-            text-align: center;
-            color: #4b5563;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 1rem;
-        }
-        .drop-zone.dragover { background-color: #eff6ff; border-color: var(--primary); }
-        
-        .input-group { margin-bottom: 1.2rem; }
-        .input-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-        .input-group small {
-            display: block;
-            color: #6b7280;
-            margin-bottom: 0.5rem;
-            font-size: 0.8rem;
-        }
-        input[type="text"], select, input[type="range"] {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        .range-value {
-            display: inline-block;
-            font-weight: bold;
-            color: var(--primary);
-            margin-left: 10px;
-        }
-        
-        button.action-btn {
-            width: 100%;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.8rem;
-            border-radius: 4px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        button.action-btn:hover { background-color: var(--primary-hover); }
-        button.action-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
-        
-        /* CSS List Merge (Sama seperti versi sebelumnya) */
-        ul.page-list { list-style: none; padding: 0; margin-bottom: 1rem; max-height: 350px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; background: #f9fafb; scroll-behavior: smooth; }
-        ul.page-list li { display: flex; align-items: center; background: var(--surface); padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; cursor: grab; gap: 10px; }
-        ul.page-list li:last-child { border-bottom: none; }
-        .drag-handle { color: #9ca3af; font-size: 1.2rem; }
-        .page-badge { background-color: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; min-width: 25px; text-align: center; }
-        .page-info { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .btn-sm { background: #e5e7eb; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-        .btn-sm:hover { background: #d1d5db; }
-        .remove-btn { background: #fee2e2; color: #dc2626; }
-        
-        .alert-warning {
-            background-color: #fffbeb;
-            color: #b45309;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            margin-bottom: 1rem;
-            border: 1px solid #fde68a;
-        }
-        
-        #progress-container {
-            display: none;
-            margin-top: 1rem;
-        }
-        #progress-bar {
-            height: 8px;
-            background-color: var(--primary);
-            width: 0%;
-            border-radius: 4px;
-            transition: width 0.3s;
-        }
-
         /* Banner Informasi Privasi & Keamanan Offline */
         .privacy-banner {
             display: flex;
             align-items: center;
             gap: 12px;
-            background-color: #f0fdf4;
-            border-bottom: 1px solid #bbf7d0;
+            background-color: var(--success-bg);
+            border-bottom: 1px solid var(--success-border);
             padding: 0.75rem 1.25rem;
-            color: #166534;
+            color: var(--success-text);
             font-size: 0.825rem;
             line-height: 1.45;
         }
@@ -164,15 +94,270 @@
         .privacy-banner-text strong {
             color: #14532d;
         }
+
+        .drop-zone {
+            border: 2px dashed #9ca3af;
+            border-radius: 6px;
+            padding: 1.8rem 1rem;
+            text-align: center;
+            color: #4b5563;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 1rem;
+            background-color: #fafafa;
+        }
+        .drop-zone:hover {
+            background-color: #eff6ff;
+            border-color: var(--primary);
+        }
+        .drop-zone.dragover {
+            background-color: #eff6ff;
+            border-color: var(--primary);
+        }
+        
+        .file-info-badge {
+            margin-bottom: 1rem;
+            color: var(--primary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            background: #eff6ff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .input-group { margin-bottom: 1.2rem; }
+        .input-group label {
+            display: block;
+            margin-bottom: 0.45rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        .input-group small {
+            display: block;
+            color: var(--text-muted);
+            margin-bottom: 0.45rem;
+            font-size: 0.8rem;
+            line-height: 1.35;
+        }
+        input[type="text"], input[type="number"], select, input[type="range"] {
+            width: 100%;
+            padding: 0.7rem 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+        .range-value {
+            display: inline-block;
+            font-weight: bold;
+            color: var(--primary);
+            margin-left: 8px;
+        }
+        
+        button.action-btn {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.85rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button.action-btn:hover { background-color: var(--primary-hover); }
+        button.action-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        
+        /* List Items (Merge & Image to PDF) */
+        ul.page-list {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 1rem;
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #f9fafb;
+            scroll-behavior: smooth;
+        }
+        ul.page-list li {
+            display: flex;
+            align-items: center;
+            background: var(--surface);
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+            gap: 10px;
+        }
+        ul.page-list li:last-child { border-bottom: none; }
+        .drag-handle { color: #9ca3af; font-size: 1.2rem; cursor: grab; }
+        .page-badge {
+            background-color: var(--primary);
+            color: white;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 25px;
+            text-align: center;
+        }
+        .page-info { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item-thumb {
+            width: 36px;
+            height: 36px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .btn-sm {
+            background: #e5e7eb;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .btn-sm:hover { background: #d1d5db; }
+        .remove-btn { background: var(--danger-bg); color: var(--danger); }
+        .remove-btn:hover { background: #fecaca; }
+        
+        .alert-warning {
+            background-color: #fffbeb;
+            color: #b45309;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            border: 1px solid #fde68a;
+            line-height: 1.4;
+        }
+        
+        /* Watermark Presets */
+        .preset-badge {
+            display: inline-block;
+            padding: 4px 9px;
+            background: #eff6ff;
+            color: var(--primary);
+            border: 1px solid #bfdbfe;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            transition: all 0.15s;
+        }
+        .preset-badge:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        /* Grid Form Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        @media (max-width: 600px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            body { padding: 1rem 0.5rem; }
+        }
+
+        /* Preview Grid (PDF ke Gambar) */
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+            gap: 12px;
+            margin-top: 1rem;
+            max-height: 380px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #f9fafb;
+        }
+        .preview-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .preview-card img {
+            width: 100%;
+            height: 130px;
+            object-fit: contain;
+            background: #f3f4f6;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+        .preview-card .card-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+        .preview-card button {
+            width: 100%;
+            padding: 4px 6px;
+            font-size: 0.75rem;
+        }
+
+        /* Generic Progress Bar */
+        .progress-box {
+            display: none;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        .progress-box-bar-bg {
+            background-color: #e5e7eb;
+            border-radius: 4px;
+            width: 100%;
+            overflow: hidden;
+            height: 8px;
+        }
+        .progress-box-bar {
+            height: 8px;
+            background-color: var(--primary);
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.25s;
+        }
+        .progress-box-text {
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            color: #4b5563;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- TAB MENU -->
     <div class="tabs">
-        <button class="tab-btn" onclick="switchTab('split')">Split</button>
-        <button class="tab-btn" onclick="switchTab('merge')">Merge & Reorder</button>
-        <button class="tab-btn active" onclick="switchTab('compress')">Kompres & DPI</button>
+        <button class="tab-btn active" onclick="switchTab('split')">Split</button>
+        <button class="tab-btn" onclick="switchTab('merge')">Merge & Urutkan</button>
+        <button class="tab-btn" onclick="switchTab('compress')">Kompres & DPI</button>
+        <button class="tab-btn" onclick="switchTab('delete')">Hapus Halaman</button>
+        <button class="tab-btn" onclick="switchTab('rotate')">Putar Halaman</button>
+        <button class="tab-btn" onclick="switchTab('watermark')">Watermark Teks</button>
+        <button class="tab-btn" onclick="switchTab('pdf-to-img')">PDF ke Gambar</button>
+        <button class="tab-btn" onclick="switchTab('img-to-pdf')">Gambar ke PDF</button>
     </div>
 
     <!-- Info Privasi & Keamanan Offline -->
@@ -186,20 +371,21 @@
         </div>
     </div>
 
-    <!-- TAB: SPLIT -->
-    <div id="tab-split" class="tab-content">
-        <div id="dropzone-split" class="drop-zone">Drag & Drop 1 File PDF di sini</div>
-        <div id="split-file-info" style="margin-bottom: 1rem; color: var(--primary); font-size: 0.85rem;">Belum ada file terpilih</div>
+    <!-- TAB 1: SPLIT -->
+    <div id="tab-split" class="tab-content active">
+        <div id="dropzone-split" class="drop-zone">Drag & Drop 1 File PDF di sini atau klik untuk memilih</div>
+        <div id="split-file-info" class="file-info-badge">Belum ada file terpilih</div>
         <div class="input-group">
-            <label>Rentang Halaman (misal: 1, 3-5, 8)</label>
-            <input type="text" id="split-range" placeholder="1, 3-5">
+            <label>Rentang Halaman yang Ingin Diambil</label>
+            <small>Gunakan koma atau tanda hubung. Contoh: <code>1, 3-5, 8</code></small>
+            <input type="text" id="split-range" placeholder="Contoh: 1, 3-5">
         </div>
         <button class="action-btn" onclick="processSplit()">Ekstrak Halaman</button>
     </div>
 
-    <!-- TAB: MERGE & REORDER -->
+    <!-- TAB 2: MERGE & REORDER -->
     <div id="tab-merge" class="tab-content">
-        <div id="dropzone-merge" class="drop-zone">Drag & Drop File PDF di sini</div>
+        <div id="dropzone-merge" class="drop-zone">Drag & Drop Beberapa File PDF di sini atau klik untuk memilih</div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
             <div id="total-pages-info" style="font-size: 0.85rem; font-weight: 600;"></div>
             <button id="clear-merge-btn" class="btn-sm remove-btn" style="display: none;" onclick="clearMergeWorkspace()">Bersihkan Area</button>
@@ -208,15 +394,15 @@
         <button class="action-btn" onclick="processMergeReorder()">Gabungkan PDF</button>
     </div>
 
-    <!-- TAB: COMPRESS -->
-    <div id="tab-compress" class="tab-content active">
+    <!-- TAB 3: COMPRESS -->
+    <div id="tab-compress" class="tab-content">
         <div class="alert-warning">
             <strong>Catatan Sistem Offline:</strong> Fitur kompresi ini bekerja dengan meratakan PDF menjadi format gambar (Flattening). 
             Ini akan sangat mengecilkan ukuran file, namun teks di dalam PDF tidak akan bisa diblok atau disalin lagi.
         </div>
         
         <div id="dropzone-compress" class="drop-zone">Drag & Drop 1 File PDF untuk Dikompres</div>
-        <div id="compress-file-info" style="margin-bottom: 1rem; color: var(--primary); font-size: 0.85rem;">Belum ada file terpilih</div>
+        <div id="compress-file-info" class="file-info-badge">Belum ada file terpilih</div>
         
         <div class="input-group">
             <label>Kerapatan Pixel (DPI)</label>
@@ -234,32 +420,232 @@
             <input type="range" id="compress-quality" min="10" max="100" value="70" oninput="document.getElementById('quality-val').textContent = this.value + '%'">
         </div>
         
-        <div id="progress-container">
-            <div style="font-size: 0.8rem; margin-bottom: 5px; color: #4b5563;" id="progress-text">Memproses: 0%</div>
-            <div style="background-color: #e5e7eb; border-radius: 4px; width: 100%;">
-                <div id="progress-bar"></div>
+        <div id="progress-container" class="progress-box">
+            <div class="progress-box-text" id="progress-text">Memproses: 0%</div>
+            <div class="progress-box-bar-bg">
+                <div id="progress-bar" class="progress-box-bar"></div>
             </div>
         </div>
         
-        <button id="btn-compress" class="action-btn" style="margin-top: 1rem;" onclick="processCompress()">Kompres PDF</button>
+        <button id="btn-compress" class="action-btn" onclick="processCompress()">Kompres PDF</button>
+    </div>
+
+    <!-- TAB 4: HAPUS HALAMAN -->
+    <div id="tab-delete" class="tab-content">
+        <div id="dropzone-delete" class="drop-zone">Drag & Drop 1 File PDF di sini</div>
+        <div id="delete-file-info" class="file-info-badge">Belum ada file terpilih</div>
+        <div class="input-group">
+            <label>Nomor Halaman yang Ingin Dihapus</label>
+            <small>Masukkan halaman yang hendak dibuang. Contoh: <code>1, 4, 7-10</code></small>
+            <input type="text" id="delete-range" placeholder="Contoh: 1, 3-5">
+        </div>
+        <div id="delete-summary-info" style="font-size: 0.85rem; color: #4b5563; margin-bottom: 1rem;"></div>
+        <button class="action-btn" onclick="processDeletePages()">Hapus Halaman & Simpan</button>
+    </div>
+
+    <!-- TAB 5: PUTAR HALAMAN -->
+    <div id="tab-rotate" class="tab-content">
+        <div id="dropzone-rotate" class="drop-zone">Drag & Drop 1 File PDF di sini</div>
+        <div id="rotate-file-info" class="file-info-badge">Belum ada file terpilih</div>
+        
+        <div class="grid-2">
+            <div class="input-group">
+                <label>Arah / Sudut Rotasi</label>
+                <select id="rotate-angle">
+                    <option value="90">Putar 90° Searah Jarum Jam (Kanan)</option>
+                    <option value="180">Putar 180° (Balik)</option>
+                    <option value="270">Putar 90° Berlawanan Jarum Jam (Kiri)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Pilihan Halaman</label>
+                <select id="rotate-scope" onchange="toggleRotateCustomRange()">
+                    <option value="all">Semua Halaman</option>
+                    <option value="odd">Halaman Ganjil Saja (1, 3, 5, ...)</option>
+                    <option value="even">Halaman Genap Saja (2, 4, 6, ...)</option>
+                    <option value="custom">Halaman Tertentu (Kustom)</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="rotate-custom-box" class="input-group" style="display: none;">
+            <label>Rentang Halaman Tertentu yang Diputar</label>
+            <small>Contoh: <code>1, 3-5, 8</code></small>
+            <input type="text" id="rotate-range" placeholder="Contoh: 2, 4-6">
+        </div>
+
+        <button class="action-btn" onclick="processRotatePages()">Putar & Simpan PDF</button>
+    </div>
+
+    <!-- TAB 6: WATERMARK TEKS -->
+    <div id="tab-watermark" class="tab-content">
+        <div id="dropzone-watermark" class="drop-zone">Drag & Drop 1 File PDF di sini</div>
+        <div id="watermark-file-info" class="file-info-badge">Belum ada file terpilih</div>
+
+        <div class="input-group">
+            <label>Teks Watermark</label>
+            <input type="text" id="watermark-text" placeholder="Ketik teks watermark, misal: CONFIDENTIAL">
+            <div style="margin-top: 6px;">
+                <small style="margin-bottom: 4px;">Pilihan Cepat:</small>
+                <span class="preset-badge" onclick="setWatermarkPreset('RAHASIA')">RAHASIA</span>
+                <span class="preset-badge" onclick="setWatermarkPreset('CONFIDENTIAL')">CONFIDENTIAL</span>
+                <span class="preset-badge" onclick="setWatermarkPreset('DRAF')">DRAF</span>
+                <span class="preset-badge" onclick="setWatermarkPreset('SALINAN')">SALINAN</span>
+                <span class="preset-badge" onclick="setWatermarkPreset('LUNAS')">LUNAS</span>
+                <span class="preset-badge" onclick="setWatermarkPreset('SAMPLE')">SAMPLE</span>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="input-group">
+                <label>Posisi Watermark</label>
+                <select id="watermark-position">
+                    <option value="diagonal" selected>Diagonal Tengah (45°)</option>
+                    <option value="center">Horizontal Tengah</option>
+                    <option value="header">Bagian Atas (Header)</option>
+                    <option value="footer">Bagian Bawah (Footer)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Warna Watermark</label>
+                <select id="watermark-color">
+                    <option value="#6b7280" selected>Abu-abu Netral</option>
+                    <option value="#dc2626">Merah</option>
+                    <option value="#2563eb">Biru</option>
+                    <option value="#111827">Hitam</option>
+                    <option value="#ea580c">Oranye</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="input-group">
+                <label>Transparansi (Opasitas): <span id="wm-opacity-val" class="range-value">25%</span></label>
+                <input type="range" id="watermark-opacity" min="5" max="90" value="25" oninput="document.getElementById('wm-opacity-val').textContent = this.value + '%'">
+            </div>
+            <div class="input-group">
+                <label>Ukuran Font: <span id="wm-size-val" class="range-value">40px</span></label>
+                <input type="range" id="watermark-size" min="16" max="72" value="40" oninput="document.getElementById('wm-size-val').textContent = this.value + 'px'">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>Rentang Halaman (Opsional)</label>
+            <small>Biarkan kosong untuk memberi watermark ke seluruh halaman, atau isi seperti: <code>1, 3-5</code></small>
+            <input type="text" id="watermark-range" placeholder="Kosongkan untuk semua halaman">
+        </div>
+
+        <button class="action-btn" onclick="processWatermark()">Terapkan Watermark</button>
+    </div>
+
+    <!-- TAB 7: PDF KE GAMBAR -->
+    <div id="tab-pdf-to-img" class="tab-content">
+        <div id="dropzone-pdf-to-img" class="drop-zone">Drag & Drop 1 File PDF di sini</div>
+        <div id="pdf-to-img-info" class="file-info-badge">Belum ada file terpilih</div>
+
+        <div class="grid-2">
+            <div class="input-group">
+                <label>Format Gambar</label>
+                <select id="pdf-img-format">
+                    <option value="image/jpeg" selected>JPG (Ukuran Efisien)</option>
+                    <option value="image/png">PNG (Kualitas Tanpa Kompresi)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Resolusi (DPI)</label>
+                <select id="pdf-img-dpi">
+                    <option value="150" selected>150 DPI - Standar Rekomendasi</option>
+                    <option value="300">300 DPI - Kualitas Tinggi (Cetak)</option>
+                    <option value="72">72 DPI - Ringan / Cepat</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>Rentang Halaman (Opsional)</label>
+            <small>Kosongkan untuk mengekspor semua halaman, atau masukkan rentang: <code>1, 3-5</code></small>
+            <input type="text" id="pdf-img-range" placeholder="Kosongkan untuk semua halaman">
+        </div>
+
+        <div id="progress-pdf-img" class="progress-box">
+            <div class="progress-box-text" id="progress-pdf-img-text">Memproses: 0%</div>
+            <div class="progress-box-bar-bg">
+                <div id="progress-pdf-img-bar" class="progress-box-bar"></div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
+            <button id="btn-pdf-img-process" class="action-btn" onclick="processPdfToImg()">Konversi ke Gambar</button>
+            <button id="btn-download-all-zip" class="action-btn" style="display: none; background-color: #059669;" onclick="downloadAllImagesZip()">Unduh Semua (.ZIP)</button>
+        </div>
+
+        <div id="pdf-img-preview-container" style="display: none;">
+            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">Hasil Gambar Halaman:</div>
+            <div id="pdf-img-grid" class="preview-grid"></div>
+        </div>
+    </div>
+
+    <!-- TAB 8: GAMBAR KE PDF -->
+    <div id="tab-img-to-pdf" class="tab-content">
+        <div id="dropzone-img-to-pdf" class="drop-zone">Drag & Drop Gambar (JPG, PNG, WebP) di sini atau klik untuk memilih</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <div id="img-to-pdf-count" style="font-size: 0.85rem; font-weight: 600;"></div>
+            <button id="clear-img-btn" class="btn-sm remove-btn" style="display: none;" onclick="clearImgToPdfWorkspace()">Bersihkan Semua</button>
+        </div>
+
+        <ul id="img-to-pdf-list" class="page-list" style="display: none;"></ul>
+
+        <div class="grid-2">
+            <div class="input-group">
+                <label>Ukuran Kertas PDF</label>
+                <select id="img-pdf-size">
+                    <option value="auto" selected>Otomatis (Sesuai Ukuran Asli Gambar)</option>
+                    <option value="a4-portrait">A4 Tegak (Portrait)</option>
+                    <option value="a4-landscape">A4 Mendatar (Landscape)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Margin Halaman</label>
+                <select id="img-pdf-margin">
+                    <option value="0" selected>Tanpa Margin (Penuh)</option>
+                    <option value="20">Margin Standar (20pt)</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="progress-img-pdf" class="progress-box">
+            <div class="progress-box-text" id="progress-img-pdf-text">Memproses: 0%</div>
+            <div class="progress-box-bar-bg">
+                <div id="progress-img-pdf-bar" class="progress-box-bar"></div>
+            </div>
+        </div>
+
+        <button id="btn-img-to-pdf" class="action-btn" onclick="processImgToPdf()">Buat File PDF</button>
     </div>
 </div>
 
 <script>
-    // --- SETUP PDF.JS WORKER UNTUK RENDERING COMPRESS ---
+    // --- SETUP PDF.JS WORKER UNTUK RENDERING COMPRESS & GAMBAR ---
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
     // --- STATE MANAGEMENT ---
     let splitFile = null;
     let compressFile = null;
+    let deleteFile = null;
+    let rotateFile = null;
+    let watermarkFile = null;
+    let pdfToImgFile = null;
+    let imgToPdfFiles = []; // Array of { file, previewUrl }
     let pdfDocumentsCache = [];
     let dragSourceElement = null;
+    let generatedImagesCache = []; // Untuk download ZIP atau per file
 
-    // --- TABS & DROPZONES ---
+    // --- TAB SWITCHER ---
     function switchTab(tabName, evt) {
         const ev = evt || window.event;
         document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(`tab-${tabName}`).classList.add('active');
+        const targetTab = document.getElementById(`tab-${tabName}`);
+        if (targetTab) targetTab.classList.add('active');
         if (ev && ev.currentTarget) {
             ev.currentTarget.classList.add('active');
         } else {
@@ -268,31 +654,173 @@
         }
     }
 
-    function setupDropZone(id, isMultiple, onFilesDropped) {
+    // --- GENERIC DROPZONE SETUP ---
+    function setupDropZone(id, isMultiple, onFilesDropped, acceptFilter = 'application/pdf') {
         const zone = document.getElementById(id);
+        if (!zone) return;
         zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
         zone.addEventListener('dragleave', e => { e.preventDefault(); zone.classList.remove('dragover'); });
         zone.addEventListener('drop', e => {
             e.preventDefault();
             zone.classList.remove('dragover');
-            const pdfFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
-            if (pdfFiles.length > 0) onFilesDropped(pdfFiles);
-            else alert('Harap masukkan file PDF.');
+            let files = Array.from(e.dataTransfer.files);
+            if (acceptFilter === 'image/*') {
+                files = files.filter(f => f.type.startsWith('image/'));
+                if (files.length > 0) onFilesDropped(files);
+                else alert('Harap masukkan file gambar (JPG, PNG, WebP).');
+            } else {
+                files = files.filter(f => f.type === 'application/pdf');
+                if (files.length > 0) onFilesDropped(files);
+                else alert('Harap masukkan file PDF.');
+            }
         });
         zone.addEventListener('click', () => {
             const input = document.createElement('input');
-            input.type = 'file'; input.accept = 'application/pdf'; input.multiple = isMultiple;
+            input.type = 'file';
+            input.accept = acceptFilter;
+            input.multiple = isMultiple;
             input.onchange = e => {
-                const pdfFiles = Array.from(e.target.files).filter(f => f.type === 'application/pdf');
-                if (pdfFiles.length > 0) onFilesDropped(pdfFiles);
+                let files = Array.from(e.target.files);
+                if (acceptFilter === 'image/*') {
+                    files = files.filter(f => f.type.startsWith('image/'));
+                } else {
+                    files = files.filter(f => f.type === 'application/pdf');
+                }
+                if (files.length > 0) onFilesDropped(files);
             };
             input.click();
         });
     }
 
-    // Init Dropzones
-    setupDropZone('dropzone-split', false, files => { splitFile = files[0]; document.getElementById('split-file-info').textContent = `File aktif: ${splitFile.name}`; });
-    setupDropZone('dropzone-compress', false, files => { compressFile = files[0]; document.getElementById('compress-file-info').textContent = `File aktif: ${compressFile.name}`; });
+    // --- HELPER PARSE PAGE RANGE ---
+    function parsePageRange(rangeStr, maxPages, defaultAll = false) {
+        const pages = new Set();
+        if (!rangeStr || !rangeStr.trim()) {
+            if (defaultAll) {
+                for (let i = 0; i < maxPages; i++) pages.add(i);
+            }
+            return pages;
+        }
+        for (let part of rangeStr.split(',')) {
+            part = part.trim();
+            if (part.includes('-')) {
+                const parts = part.split('-');
+                const start = parseInt(parts[0], 10);
+                const end = parseInt(parts[1], 10);
+                if (!isNaN(start) && !isNaN(end)) {
+                    const s = Math.max(1, Math.min(start, end));
+                    const e = Math.min(maxPages, Math.max(start, end));
+                    for (let i = s; i <= e; i++) pages.add(i - 1);
+                }
+            } else {
+                const num = parseInt(part, 10);
+                if (!isNaN(num) && num >= 1 && num <= maxPages) {
+                    pages.add(num - 1);
+                }
+            }
+        }
+        return pages;
+    }
+
+    // --- HELPER COLOR HEX TO RGB (0.0 - 1.0) ---
+    function hexToRgb(hex) {
+        const clean = hex.replace('#', '');
+        return {
+            r: parseInt(clean.substring(0, 2), 16) / 255,
+            g: parseInt(clean.substring(2, 4), 16) / 255,
+            b: parseInt(clean.substring(4, 6), 16) / 255
+        };
+    }
+
+    // --- HELPER DOWNLOAD FILE ---
+    function downloadFile(content, filename, mimeType = 'application/pdf') {
+        const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // --- INISIALISASI DROPZONES ---
+    setupDropZone('dropzone-split', false, async files => {
+        splitFile = files[0];
+        const bytes = await splitFile.arrayBuffer();
+        const doc = await PDFLib.PDFDocument.load(bytes);
+        document.getElementById('split-file-info').textContent = `File aktif: ${splitFile.name} (${doc.getPageCount()} Halaman)`;
+    });
+
+    setupDropZone('dropzone-compress', false, async files => {
+        compressFile = files[0];
+        const bytes = await compressFile.arrayBuffer();
+        const doc = await PDFLib.PDFDocument.load(bytes);
+        document.getElementById('compress-file-info').textContent = `File aktif: ${compressFile.name} (${doc.getPageCount()} Halaman)`;
+    });
+
+    setupDropZone('dropzone-delete', false, async files => {
+        deleteFile = files[0];
+        const bytes = await deleteFile.arrayBuffer();
+        const doc = await PDFLib.PDFDocument.load(bytes);
+        const total = doc.getPageCount();
+        document.getElementById('delete-file-info').textContent = `File aktif: ${deleteFile.name} (Total ${total} Halaman)`;
+        document.getElementById('delete-summary-info').textContent = `Total halaman dokumen: ${total}. Masukkan nomor halaman yang ingin dibuang.`;
+    });
+
+    setupDropZone('dropzone-rotate', false, async files => {
+        rotateFile = files[0];
+        const bytes = await rotateFile.arrayBuffer();
+        const doc = await PDFLib.PDFDocument.load(bytes);
+        document.getElementById('rotate-file-info').textContent = `File aktif: ${rotateFile.name} (Total ${doc.getPageCount()} Halaman)`;
+    });
+
+    setupDropZone('dropzone-watermark', false, async files => {
+        watermarkFile = files[0];
+        const bytes = await watermarkFile.arrayBuffer();
+        const doc = await PDFLib.PDFDocument.load(bytes);
+        document.getElementById('watermark-file-info').textContent = `File aktif: ${watermarkFile.name} (Total ${doc.getPageCount()} Halaman)`;
+    });
+
+    setupDropZone('dropzone-pdf-to-img', false, async files => {
+        pdfToImgFile = files[0];
+        const bytes = await pdfToImgFile.arrayBuffer();
+        const doc = await PDFLib.PDFDocument.load(bytes);
+        document.getElementById('pdf-to-img-info').textContent = `File aktif: ${pdfToImgFile.name} (Total ${doc.getPageCount()} Halaman)`;
+        document.getElementById('pdf-img-preview-container').style.display = 'none';
+        document.getElementById('btn-download-all-zip').style.display = 'none';
+        generatedImagesCache = [];
+    });
+
+    setupDropZone('dropzone-img-to-pdf', true, files => {
+        addImagesToWorkspace(files);
+    }, 'image/*');
+
+    // --- TAB 1: SPLIT LOGIC ---
+    async function processSplit() {
+        if (!splitFile) return alert('Silakan pilih file PDF terlebih dahulu.');
+        const range = document.getElementById('split-range').value;
+        if (!range) return alert('Masukkan rentang halaman.');
+        
+        try {
+            const arrayBuffer = await splitFile.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+            const maxPages = pdfDoc.getPageCount();
+            
+            const indices = Array.from(parsePageRange(range, maxPages)).sort((a, b) => a - b);
+            if (indices.length === 0) return alert('Rentang halaman tidak valid.');
+
+            const newPdf = await PDFLib.PDFDocument.create();
+            const copiedPages = await newPdf.copyPages(pdfDoc, indices);
+            copiedPages.forEach(p => newPdf.addPage(p));
+            downloadFile(await newPdf.save(), `Split_${splitFile.name}`);
+        } catch (e) {
+            alert('Gagal memproses split: ' + e.message);
+        }
+    }
+
+    // --- TAB 2: MERGE LOGIC ---
     setupDropZone('dropzone-merge', true, async files => {
         const listContainer = document.getElementById('merge-page-list');
         document.getElementById('clear-merge-btn').style.display = 'inline-block';
@@ -324,7 +852,6 @@
         updatePageNumbers();
     });
 
-    // --- FUNGSI MERGE (Sama seperti sebelumnya) ---
     function updatePageNumbers() {
         const listItems = document.querySelectorAll('#merge-page-list li');
         listItems.forEach((item, index) => item.querySelector('.page-badge').textContent = '#' + (index + 1));
@@ -342,8 +869,8 @@
     function moveToPos(btn) {
         const li = btn.closest('li'); const list = li.parentNode; const total = list.children.length;
         let target = prompt(`Pindah ke urutan berapa? (1 - ${total})`);
-        if (!target) return; target = parseInt(target);
-        if (isNaN(target) || target < 1 || target > total) return alert('Angka tidak valid!');
+        if (!target) return; target = parseInt(target, 10);
+        if (isNaN(target) || target < 1 || target > total) return alert('Angka urutan tidak valid!');
         list.removeChild(li);
         if (target === 1) list.prepend(li); else if (target >= total) list.append(li);
         else list.insertBefore(li, list.children[target - 1]);
@@ -366,54 +893,25 @@
         item.addEventListener('dragend', function(e) { this.style.opacity = '1'; updatePageNumbers(); });
     }
 
-    async function processSplit() {
-        if (!splitFile) return alert('Masukkan file PDF.');
-        const range = document.getElementById('split-range').value; if (!range) return alert('Masukkan rentang.');
-        
-        const arrayBuffer = await splitFile.arrayBuffer();
-        const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-        const maxPages = pdfDoc.getPageCount();
-        
-        const pagesToKeep = new Set();
-        for (let part of range.split(',')) {
-            part = part.trim();
-            if (part.includes('-')) {
-                const [start, end] = part.split('-').map(n => parseInt(n));
-                for (let i = start; i <= end; i++) if (i >= 1 && i <= maxPages) pagesToKeep.add(i - 1);
-            } else {
-                const num = parseInt(part);
-                if (num >= 1 && num <= maxPages) pagesToKeep.add(num - 1);
-            }
-        }
-        
-        const indices = Array.from(pagesToKeep).sort((a, b) => a - b);
-        if (indices.length === 0) return alert('Rentang tidak valid.');
-
-        const newPdf = await PDFLib.PDFDocument.create();
-        const copiedPages = await newPdf.copyPages(pdfDoc, indices);
-        copiedPages.forEach(p => newPdf.addPage(p));
-        downloadFile(await newPdf.save(), `Split_${splitFile.name}`);
-    }
-
     async function processMergeReorder() {
         const items = document.querySelectorAll('#merge-page-list li');
-        if (items.length === 0) return alert('Area kerja kosong.');
+        if (items.length === 0) return alert('Area kerja penggabungan masih kosong.');
         const btn = event.target; btn.textContent = 'Memproses...'; btn.disabled = true;
 
         try {
             const mergedPdf = await PDFLib.PDFDocument.create();
             for (const item of items) {
-                const docId = parseInt(item.dataset.docId);
-                const pageIndex = parseInt(item.dataset.pageIndex);
+                const docId = parseInt(item.dataset.docId, 10);
+                const pageIndex = parseInt(item.dataset.pageIndex, 10);
                 const [copiedPage] = await mergedPdf.copyPages(pdfDocumentsCache[docId], [pageIndex]);
                 mergedPdf.addPage(copiedPage);
             }
             downloadFile(await mergedPdf.save(), 'Merged_Custom.pdf');
-        } catch (e) { alert('Gagal: ' + e.message); } 
+        } catch (e) { alert('Gagal menggabungkan: ' + e.message); } 
         finally { btn.textContent = 'Gabungkan PDF'; btn.disabled = false; }
     }
 
-    // --- FUNGSI BARU: PROSES KOMPRESI (PDF.js -> Canvas -> PDF-Lib) ---
+    // --- TAB 3: COMPRESS LOGIC ---
     async function processCompress() {
         if (!compressFile) return alert('Silakan masukkan file PDF untuk dikompres.');
         
@@ -422,8 +920,8 @@
         const progressBar = document.getElementById('progress-bar');
         const progressText = document.getElementById('progress-text');
         
-        const dpi = parseInt(document.getElementById('compress-dpi').value);
-        const quality = parseInt(document.getElementById('compress-quality').value) / 100;
+        const dpi = parseInt(document.getElementById('compress-dpi').value, 10);
+        const quality = parseInt(document.getElementById('compress-quality').value, 10) / 100;
         
         btn.disabled = true;
         btn.textContent = "Memproses Kompresi...";
@@ -432,51 +930,31 @@
         
         try {
             const arrayBuffer = await compressFile.arrayBuffer();
-            
-            // 1. Load PDF menggunakan PDF.js
             const loadingTask = pdfjsLib.getDocument({data: new Uint8Array(arrayBuffer)});
             const pdfJsDoc = await loadingTask.promise;
             const totalPages = pdfJsDoc.numPages;
             
-            // 2. Buat dokumen PDF baru menggunakan PDF-Lib
             const newPdf = await PDFLib.PDFDocument.create();
-            
-            // Canvas untuk merender gambar (dibuat di background, tidak dimunculkan di HTML)
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            
-            // Base scale PDF biasanya dihitung dari 72 DPI. 
-            // Jadi jika user milih 150 DPI, scale-nya adalah 150/72 = ~2.08
             const scale = dpi / 72;
 
-            // 3. Loop setiap halaman
             for (let i = 1; i <= totalPages; i++) {
-                // Update UI Progress
                 const percent = Math.round(((i - 1) / totalPages) * 100);
                 progressBar.style.width = percent + '%';
                 progressText.textContent = `Merender halaman ${i} dari ${totalPages}...`;
                 
                 const page = await pdfJsDoc.getPage(i);
-                
-                // Ambil ukuran canvas sesuai DPI yang dipilih (Gambar resolusi tinggi/rendah)
                 const viewportCanvas = page.getViewport({ scale: scale });
                 canvas.width = viewportCanvas.width;
                 canvas.height = viewportCanvas.height;
                 
-                // Render halaman PDF ke dalam canvas
                 await page.render({ canvasContext: ctx, viewport: viewportCanvas }).promise;
-                
-                // Konversi canvas menjadi gambar JPEG yang dikompres
                 const imgDataUrl = canvas.toDataURL('image/jpeg', quality);
-                
-                // Embed gambar JPEG ke dalam dokumen PDF-Lib baru
                 const jpgImage = await newPdf.embedJpg(imgDataUrl);
                 
-                // Dapatkan ukuran ASLI dari halaman PDF (selalu gunakan scale 1 untuk ukuran dokumen fisik)
                 const viewportOriginal = page.getViewport({ scale: 1 });
                 const newPage = newPdf.addPage([viewportOriginal.width, viewportOriginal.height]);
-                
-                // Gambar/Tempel hasil render ke dalam PDF baru yang ukurannya sama persis dengan aslinya
                 newPage.drawImage(jpgImage, {
                     x: 0,
                     y: 0,
@@ -485,17 +963,13 @@
                 });
             }
             
-            // Finalisasi
             progressBar.style.width = '100%';
             progressText.textContent = "Menyimpan file hasil kompresi...";
-            
-            // Simpan dan unduh
             const pdfBytes = await newPdf.save();
             downloadFile(pdfBytes, `Compressed_${compressFile.name}`);
-            
         } catch (error) {
             console.error(error);
-            alert('Terjadi kesalahan saat mengkompres PDF: ' + error.message);
+            alert('Terjadi kesalahan saat mengompres PDF: ' + error.message);
         } finally {
             btn.disabled = false;
             btn.textContent = "Kompres PDF";
@@ -503,14 +977,411 @@
         }
     }
 
-    // --- HELPER DOWNLOAD ---
-    function downloadFile(bytes, filename) {
-        const blob = new Blob([bytes], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = filename;
-        document.body.appendChild(a); a.click();
-        document.body.removeChild(a); URL.revokeObjectURL(url);
+    // --- TAB 4: HAPUS HALAMAN LOGIC ---
+    async function processDeletePages() {
+        if (!deleteFile) return alert('Silakan pilih file PDF terlebih dahulu.');
+        const range = document.getElementById('delete-range').value;
+        if (!range || !range.trim()) return alert('Masukkan nomor halaman yang hendak dihapus.');
+
+        try {
+            const bytes = await deleteFile.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(bytes);
+            const totalPages = pdfDoc.getPageCount();
+
+            const pagesToDelete = parsePageRange(range, totalPages);
+            if (pagesToDelete.size === 0) return alert('Nomor halaman yang dimasukkan tidak ditemukan.');
+            if (pagesToDelete.size >= totalPages) return alert('Tidak dapat menghapus semua halaman. Dokumen minimal harus menyisakan 1 halaman.');
+
+            const keepIndices = [];
+            for (let i = 0; i < totalPages; i++) {
+                if (!pagesToDelete.has(i)) keepIndices.push(i);
+            }
+
+            const newPdf = await PDFLib.PDFDocument.create();
+            const copiedPages = await newPdf.copyPages(pdfDoc, keepIndices);
+            copiedPages.forEach(p => newPdf.addPage(p));
+
+            downloadFile(await newPdf.save(), `HapusHalaman_${deleteFile.name}`);
+        } catch (e) {
+            alert('Gagal menghapus halaman: ' + e.message);
+        }
+    }
+
+    // --- TAB 5: PUTAR HALAMAN LOGIC ---
+    function toggleRotateCustomRange() {
+        const scope = document.getElementById('rotate-scope').value;
+        document.getElementById('rotate-custom-box').style.display = scope === 'custom' ? 'block' : 'none';
+    }
+
+    async function processRotatePages() {
+        if (!rotateFile) return alert('Silakan pilih file PDF terlebih dahulu.');
+        const angle = parseInt(document.getElementById('rotate-angle').value, 10);
+        const scope = document.getElementById('rotate-scope').value;
+
+        try {
+            const bytes = await rotateFile.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(bytes);
+            const totalPages = pdfDoc.getPageCount();
+
+            let targetIndices = new Set();
+            if (scope === 'all') {
+                for (let i = 0; i < totalPages; i++) targetIndices.add(i);
+            } else if (scope === 'odd') {
+                for (let i = 0; i < totalPages; i += 2) targetIndices.add(i); // hal 1, 3, 5... (index 0, 2, 4)
+            } else if (scope === 'even') {
+                for (let i = 1; i < totalPages; i += 2) targetIndices.add(i); // hal 2, 4, 6... (index 1, 3, 5)
+            } else if (scope === 'custom') {
+                const range = document.getElementById('rotate-range').value;
+                if (!range) return alert('Masukkan nomor halaman yang ingin diputar.');
+                targetIndices = parsePageRange(range, totalPages);
+            }
+
+            if (targetIndices.size === 0) return alert('Tidak ada halaman yang dipilih untuk diputar.');
+
+            targetIndices.forEach(idx => {
+                const page = pdfDoc.getPage(idx);
+                const cur = page.getRotation().angle || 0;
+                page.setRotation(PDFLib.degrees((cur + angle) % 360));
+            });
+
+            downloadFile(await pdfDoc.save(), `Putar_${rotateFile.name}`);
+        } catch (e) {
+            alert('Gagal memutar halaman: ' + e.message);
+        }
+    }
+
+    // --- TAB 6: WATERMARK TEKS LOGIC ---
+    function setWatermarkPreset(text) {
+        document.getElementById('watermark-text').value = text;
+    }
+
+    async function processWatermark() {
+        if (!watermarkFile) return alert('Silakan pilih file PDF terlebih dahulu.');
+        const text = document.getElementById('watermark-text').value.trim();
+        if (!text) return alert('Silakan masukkan teks watermark.');
+
+        const position = document.getElementById('watermark-position').value;
+        const colorHex = document.getElementById('watermark-color').value;
+        const opacity = parseInt(document.getElementById('watermark-opacity').value, 10) / 100;
+        const fontSize = parseInt(document.getElementById('watermark-size').value, 10);
+        const range = document.getElementById('watermark-range').value;
+
+        try {
+            const bytes = await watermarkFile.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(bytes);
+            const font = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+            const totalPages = pdfDoc.getPageCount();
+            const rgb = hexToRgb(colorHex);
+
+            const targetIndices = parsePageRange(range, totalPages, true);
+
+            targetIndices.forEach(idx => {
+                const page = pdfDoc.getPage(idx);
+                const { width, height } = page.getSize();
+                const textWidth = font.widthOfTextAtSize(text, fontSize);
+                const textHeight = font.heightAtSize(fontSize);
+
+                let x = 0, y = 0, angle = 0;
+
+                if (position === 'diagonal') {
+                    angle = 45;
+                    const rad = 45 * Math.PI / 180;
+                    // Rumus geometri penempatan teks tengah pada rotasi 45 derajat
+                    x = (width / 2) - ((textWidth / 2) * Math.cos(rad) - (textHeight / 2) * Math.sin(rad));
+                    y = (height / 2) - ((textWidth / 2) * Math.sin(rad) + (textHeight / 2) * Math.cos(rad));
+                } else if (position === 'center') {
+                    angle = 0;
+                    x = (width - textWidth) / 2;
+                    y = (height - textHeight) / 2;
+                } else if (position === 'header') {
+                    angle = 0;
+                    x = (width - textWidth) / 2;
+                    y = height - 45 - textHeight;
+                } else if (position === 'footer') {
+                    angle = 0;
+                    x = (width - textWidth) / 2;
+                    y = 35;
+                }
+
+                page.drawText(text, {
+                    x,
+                    y,
+                    size: fontSize,
+                    font,
+                    color: PDFLib.rgb(rgb.r, rgb.g, rgb.b),
+                    opacity,
+                    rotate: PDFLib.degrees(angle)
+                });
+            });
+
+            downloadFile(await pdfDoc.save(), `Watermark_${watermarkFile.name}`);
+        } catch (e) {
+            alert('Gagal menerapkan watermark: ' + e.message);
+        }
+    }
+
+    // --- TAB 7: PDF KE GAMBAR LOGIC ---
+    async function processPdfToImg() {
+        if (!pdfToImgFile) return alert('Silakan pilih file PDF terlebih dahulu.');
+
+        const btn = document.getElementById('btn-pdf-img-process');
+        const zipBtn = document.getElementById('btn-download-all-zip');
+        const progressBox = document.getElementById('progress-pdf-img');
+        const progressBar = document.getElementById('progress-pdf-img-bar');
+        const progressText = document.getElementById('progress-pdf-img-text');
+        const grid = document.getElementById('pdf-img-grid');
+        const previewContainer = document.getElementById('pdf-img-preview-container');
+
+        const format = document.getElementById('pdf-img-format').value;
+        const dpi = parseInt(document.getElementById('pdf-img-dpi').value, 10);
+        const range = document.getElementById('pdf-img-range').value;
+        const scale = dpi / 72;
+
+        btn.disabled = true;
+        btn.textContent = 'Memproses Gambar...';
+        progressBox.style.display = 'block';
+        progressBar.style.width = '0%';
+        grid.innerHTML = '';
+        generatedImagesCache = [];
+
+        try {
+            const bytes = await pdfToImgFile.arrayBuffer();
+            const pdfJsDoc = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+            const totalPages = pdfJsDoc.numPages;
+
+            const targetIndices = Array.from(parsePageRange(range, totalPages, true)).sort((a, b) => a - b);
+            if (targetIndices.length === 0) throw new Error('Rentang halaman tidak valid.');
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            for (let step = 0; step < targetIndices.length; step++) {
+                const pageIndex = targetIndices[step];
+                const pageNum = pageIndex + 1;
+                const percent = Math.round((step / targetIndices.length) * 100);
+                progressBar.style.width = percent + '%';
+                progressText.textContent = `Merender halaman ${pageNum} (${step + 1} dari ${targetIndices.length})...`;
+
+                const page = await pdfJsDoc.getPage(pageNum);
+                const viewport = page.getViewport({ scale });
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                await page.render({ canvasContext: ctx, viewport }).promise;
+
+                const mimeType = format;
+                const ext = format === 'image/png' ? 'png' : 'jpg';
+                const quality = 0.92;
+                const dataUrl = canvas.toDataURL(mimeType, quality);
+
+                // Buat Blob
+                const blob = await new Promise(res => canvas.toBlob(res, mimeType, quality));
+                const filename = `${pdfToImgFile.name.replace(/\.pdf$/i, '')}_hal_${pageNum}.${ext}`;
+
+                generatedImagesCache.push({ pageNum, filename, blob, dataUrl, mimeType });
+
+                // Render card preview
+                const card = document.createElement('div');
+                card.className = 'preview-card';
+                card.innerHTML = `
+                    <img src="${dataUrl}" alt="Hal ${pageNum}">
+                    <div class="card-title">Halaman ${pageNum}</div>
+                    <button class="btn-sm" onclick="downloadSingleImage(${step})">Unduh ${ext.toUpperCase()}</button>
+                `;
+                grid.appendChild(card);
+            }
+
+            progressBar.style.width = '100%';
+            progressText.textContent = `Selesai! ${generatedImagesCache.length} gambar berhasil dibuat.`;
+            previewContainer.style.display = 'block';
+
+            if (generatedImagesCache.length > 1) {
+                zipBtn.style.display = 'inline-block';
+            }
+
+            // Jika hanya 1 halaman, langsung tawarkan unduhan otomatis
+            if (generatedImagesCache.length === 1) {
+                downloadSingleImage(0);
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert('Gagal mengonversi PDF ke gambar: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Konversi ke Gambar';
+            setTimeout(() => { progressBox.style.display = 'none'; }, 3000);
+        }
+    }
+
+    function downloadSingleImage(index) {
+        const item = generatedImagesCache[index];
+        if (!item) return;
+        downloadFile(item.blob, item.filename, item.mimeType);
+    }
+
+    async function downloadAllImagesZip() {
+        if (!generatedImagesCache || generatedImagesCache.length === 0) return alert('Belum ada gambar hasil konversi.');
+        if (typeof JSZip === 'undefined') {
+            alert('Mengunduh satu per satu karena library ZIP belum dimuat...');
+            generatedImagesCache.forEach(item => downloadSingleImage(item));
+            return;
+        }
+
+        const zip = new JSZip();
+        generatedImagesCache.forEach(item => {
+            zip.file(item.filename, item.blob);
+        });
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const zipName = `${pdfToImgFile.name.replace(/\.pdf$/i, '')}_semua_gambar.zip`;
+        downloadFile(zipBlob, zipName, 'application/zip');
+    }
+
+    // --- TAB 8: GAMBAR KE PDF LOGIC ---
+    function addImagesToWorkspace(files) {
+        const list = document.getElementById('img-to-pdf-list');
+        list.style.display = 'block';
+        document.getElementById('clear-img-btn').style.display = 'inline-block';
+
+        for (const file of files) {
+            const previewUrl = URL.createObjectURL(file);
+            imgToPdfFiles.push({ file, previewUrl });
+        }
+        renderImgToPdfList();
+    }
+
+    function renderImgToPdfList() {
+        const list = document.getElementById('img-to-pdf-list');
+        list.innerHTML = '';
+        imgToPdfFiles.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <span class="page-badge">#${index + 1}</span>
+                <img src="${item.previewUrl}" class="item-thumb" alt="Thumb">
+                <span class="page-info">${item.file.name} <small style="color: #6b7280;">(${(item.file.size / 1024).toFixed(1)} KB)</small></span>
+                <div>
+                    <button class="btn-sm" onclick="moveImgItem(${index}, -1)" ${index === 0 ? 'disabled' : ''}>▲</button>
+                    <button class="btn-sm" onclick="moveImgItem(${index}, 1)" ${index === imgToPdfFiles.length - 1 ? 'disabled' : ''}>▼</button>
+                    <button class="btn-sm remove-btn" onclick="removeImgItem(${index})">×</button>
+                </div>
+            `;
+            list.appendChild(li);
+        });
+        document.getElementById('img-to-pdf-count').textContent = imgToPdfFiles.length > 0 ? `Total: ${imgToPdfFiles.length} Gambar` : '';
+        if (imgToPdfFiles.length === 0) {
+            list.style.display = 'none';
+            document.getElementById('clear-img-btn').style.display = 'none';
+        }
+    }
+
+    function moveImgItem(index, direction) {
+        const target = index + direction;
+        if (target < 0 || target >= imgToPdfFiles.length) return;
+        const temp = imgToPdfFiles[index];
+        imgToPdfFiles[index] = imgToPdfFiles[target];
+        imgToPdfFiles[target] = temp;
+        renderImgToPdfList();
+    }
+
+    function removeImgItem(index) {
+        URL.revokeObjectURL(imgToPdfFiles[index].previewUrl);
+        imgToPdfFiles.splice(index, 1);
+        renderImgToPdfList();
+    }
+
+    function clearImgToPdfWorkspace() {
+        imgToPdfFiles.forEach(item => URL.revokeObjectURL(item.previewUrl));
+        imgToPdfFiles = [];
+        renderImgToPdfList();
+    }
+
+    async function processImgToPdf() {
+        if (imgToPdfFiles.length === 0) return alert('Silakan masukkan minimal 1 gambar.');
+
+        const btn = document.getElementById('btn-img-to-pdf');
+        const progressBox = document.getElementById('progress-img-pdf');
+        const progressBar = document.getElementById('progress-img-pdf-bar');
+        const progressText = document.getElementById('progress-img-pdf-text');
+
+        const pageSizeOption = document.getElementById('img-pdf-size').value;
+        const margin = parseInt(document.getElementById('img-pdf-margin').value, 10);
+
+        btn.disabled = true;
+        btn.textContent = 'Membuat PDF...';
+        progressBox.style.display = 'block';
+        progressBar.style.width = '0%';
+
+        try {
+            const newPdf = await PDFLib.PDFDocument.create();
+
+            for (let i = 0; i < imgToPdfFiles.length; i++) {
+                const percent = Math.round((i / imgToPdfFiles.length) * 100);
+                progressBar.style.width = percent + '%';
+                progressText.textContent = `Menempel gambar ${i + 1} dari ${imgToPdfFiles.length}...`;
+
+                const item = imgToPdfFiles[i];
+                const img = new Image();
+                img.src = item.previewUrl;
+                await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+
+                // Render ke canvas agar format gambar kompatibel standar JPEG
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                const embeddedImg = await newPdf.embedJpg(dataUrl);
+
+                let pageWidth, pageHeight;
+                if (pageSizeOption === 'auto') {
+                    pageWidth = img.naturalWidth + (margin * 2);
+                    pageHeight = img.naturalHeight + (margin * 2);
+                } else if (pageSizeOption === 'a4-portrait') {
+                    pageWidth = 595.28;
+                    pageHeight = 841.89;
+                } else if (pageSizeOption === 'a4-landscape') {
+                    pageWidth = 841.89;
+                    pageHeight = 595.28;
+                }
+
+                const page = newPdf.addPage([pageWidth, pageHeight]);
+
+                // Skalakan gambar agar pas di dalam halaman dan margin
+                const availW = pageWidth - (margin * 2);
+                const availH = pageHeight - (margin * 2);
+                const scaleW = availW / img.naturalWidth;
+                const scaleH = availH / img.naturalHeight;
+                const scale = Math.min(scaleW, scaleH);
+
+                const drawW = img.naturalWidth * scale;
+                const drawH = img.naturalHeight * scale;
+                const drawX = margin + (availW - drawW) / 2;
+                const drawY = margin + (availH - drawH) / 2;
+
+                page.drawImage(embeddedImg, {
+                    x: drawX,
+                    y: drawY,
+                    width: drawW,
+                    height: drawH
+                });
+            }
+
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Menyimpan dokumen PDF...';
+
+            const pdfBytes = await newPdf.save();
+            downloadFile(pdfBytes, 'Kompilasi_Gambar.pdf');
+        } catch (e) {
+            console.error(e);
+            alert('Gagal mengonversi gambar ke PDF: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Buat File PDF';
+            setTimeout(() => { progressBox.style.display = 'none'; }, 3000);
+        }
     }
 </script>
 
