@@ -47,10 +47,10 @@
             max-width: 780px;
             overflow: hidden;
         }
-        /* Tab Menu: Grid 2 Baris yang Rapi & Jelas */
+        /* Tab Menu: Grid Rapi & Jelas (3 Kolom Desktop, 2 Kolom Mobile) */
         .tabs {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 8px;
             padding: 1rem;
             background-color: #f8fafc;
@@ -373,14 +373,15 @@
 <body>
 
 <div class="container">
-    <!-- TAB MENU (GRID 2 BARIS DENGAN IKON) -->
+    <!-- TAB MENU (GRID 3x3 DENGAN IKON) -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('split')"><span class="tab-icon">✂️</span> Split</button>
         <button class="tab-btn" onclick="switchTab('merge')"><span class="tab-icon">🔗</span> Merge &amp; Urutkan</button>
         <button class="tab-btn" onclick="switchTab('compress')"><span class="tab-icon">🗜️</span> Kompres &amp; DPI</button>
         <button class="tab-btn" onclick="switchTab('delete')"><span class="tab-icon">🗑️</span> Hapus Halaman</button>
         <button class="tab-btn" onclick="switchTab('rotate')"><span class="tab-icon">🔄</span> Putar Halaman</button>
-        <button class="tab-btn" onclick="switchTab('watermark')"><span class="tab-icon">🏷️</span> Watermark Teks</button>
+        <button class="tab-btn" onclick="switchTab('watermark')"><span class="tab-icon">🏷️</span> Watermark Teks &amp; Logo</button>
+        <button class="tab-btn" onclick="switchTab('page-numbers')"><span class="tab-icon">🔢</span> Nomor Halaman</button>
         <button class="tab-btn" onclick="switchTab('pdf-to-img')"><span class="tab-icon">🖼️</span> PDF ke Gambar</button>
         <button class="tab-btn" onclick="switchTab('img-to-pdf')"><span class="tab-icon">📄</span> Gambar ke PDF</button>
     </div>
@@ -453,6 +454,25 @@
         </div>
         
         <button id="btn-compress" class="action-btn" onclick="processCompress()">Kompres PDF</button>
+
+        <!-- Hasil Perbandingan Ukuran Kompresi -->
+        <div id="compress-result-box" style="display: none; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 1rem; margin-top: 1rem; text-align: center;">
+            <div style="font-size: 1rem; font-weight: 700; color: #065f46; margin-bottom: 6px;">🎉 Berhasil Dikompres!</div>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 14px; margin: 8px 0; font-size: 0.9rem;">
+                <div>
+                    <div style="color: #6b7280; font-size: 0.72rem; font-weight: 600;">UKURAN AWAL</div>
+                    <div style="font-weight: 700; color: #374151; font-size: 1rem;" id="comp-size-before">0 KB</div>
+                </div>
+                <div style="font-size: 1.2rem; color: #10b981; font-weight: bold;">➔</div>
+                <div>
+                    <div style="color: #6b7280; font-size: 0.72rem; font-weight: 600;">UKURAN BARU</div>
+                    <div style="font-weight: 700; color: #047857; font-size: 1rem;" id="comp-size-after">0 KB</div>
+                </div>
+                <div style="background: #10b981; color: white; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.8rem;" id="comp-saved-badge">
+                    Hemat 0%
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- TAB 4: HAPUS HALAMAN -->
@@ -502,55 +522,98 @@
         <button class="action-btn" onclick="processRotatePages()">Putar & Simpan PDF</button>
     </div>
 
-    <!-- TAB 6: WATERMARK TEKS -->
+    <!-- TAB 6: WATERMARK TEKS & LOGO -->
     <div id="tab-watermark" class="tab-content">
         <div id="dropzone-watermark" class="drop-zone">Drag & Drop 1 File PDF di sini</div>
-        <div id="watermark-file-info" class="file-info-badge">Belum ada file terpilih</div>
+        <div id="watermark-file-info" class="file-info-badge">Belum ada file PDF terpilih</div>
 
-        <div class="input-group">
-            <label>Teks Watermark</label>
-            <input type="text" id="watermark-text" placeholder="Ketik teks watermark, misal: CONFIDENTIAL">
-            <div style="margin-top: 6px;">
-                <small style="margin-bottom: 4px;">Pilihan Cepat:</small>
-                <span class="preset-badge" onclick="setWatermarkPreset('RAHASIA')">RAHASIA</span>
-                <span class="preset-badge" onclick="setWatermarkPreset('CONFIDENTIAL')">CONFIDENTIAL</span>
-                <span class="preset-badge" onclick="setWatermarkPreset('DRAF')">DRAF</span>
-                <span class="preset-badge" onclick="setWatermarkPreset('SALINAN')">SALINAN</span>
-                <span class="preset-badge" onclick="setWatermarkPreset('LUNAS')">LUNAS</span>
-                <span class="preset-badge" onclick="setWatermarkPreset('SAMPLE')">SAMPLE</span>
+        <!-- Pilihan Mode Watermark (Teks vs Gambar/Logo) -->
+        <div style="display: flex; gap: 8px; margin-bottom: 1.2rem;">
+            <button type="button" id="btn-wm-type-text" class="btn-sm" style="flex: 1; padding: 10px; font-weight: 600; font-size: 0.85rem; background: var(--primary); color: white; border-radius: 6px;" onclick="switchWatermarkMode('text')">✍️ Watermark Teks</button>
+            <button type="button" id="btn-wm-type-image" class="btn-sm" style="flex: 1; padding: 10px; font-weight: 600; font-size: 0.85rem; background: #e2e8f0; color: #475569; border-radius: 6px;" onclick="switchWatermarkMode('image')">🖼️ Watermark Gambar / Logo</button>
+        </div>
+
+        <!-- SETTING 1: WATERMARK TEKS -->
+        <div id="wm-text-settings">
+            <div class="input-group">
+                <label>Teks Watermark</label>
+                <input type="text" id="watermark-text" placeholder="Ketik teks watermark, misal: CONFIDENTIAL">
+                <div style="margin-top: 6px;">
+                    <small style="margin-bottom: 4px;">Pilihan Cepat:</small>
+                    <span class="preset-badge" onclick="setWatermarkPreset('RAHASIA')">RAHASIA</span>
+                    <span class="preset-badge" onclick="setWatermarkPreset('CONFIDENTIAL')">CONFIDENTIAL</span>
+                    <span class="preset-badge" onclick="setWatermarkPreset('DRAF')">DRAF</span>
+                    <span class="preset-badge" onclick="setWatermarkPreset('SALINAN')">SALINAN</span>
+                    <span class="preset-badge" onclick="setWatermarkPreset('LUNAS')">LUNAS</span>
+                    <span class="preset-badge" onclick="setWatermarkPreset('SAMPLE')">SAMPLE</span>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="input-group">
+                    <label>Posisi Watermark Teks</label>
+                    <select id="watermark-position">
+                        <option value="diagonal" selected>Diagonal Tengah (45°)</option>
+                        <option value="center">Horizontal Tengah</option>
+                        <option value="header">Bagian Atas (Header)</option>
+                        <option value="footer">Bagian Bawah (Footer)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Warna Watermark Teks</label>
+                    <select id="watermark-color">
+                        <option value="#6b7280" selected>Abu-abu Netral</option>
+                        <option value="#dc2626">Merah</option>
+                        <option value="#2563eb">Biru</option>
+                        <option value="#111827">Hitam</option>
+                        <option value="#ea580c">Oranye</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="input-group">
+                    <label>Transparansi (Opasitas): <span id="wm-opacity-val" class="range-value">25%</span></label>
+                    <input type="range" id="watermark-opacity" min="5" max="90" value="25" oninput="document.getElementById('wm-opacity-val').textContent = this.value + '%'">
+                </div>
+                <div class="input-group">
+                    <label>Ukuran Font: <span id="wm-size-val" class="range-value">40px</span></label>
+                    <input type="range" id="watermark-size" min="16" max="72" value="40" oninput="document.getElementById('wm-size-val').textContent = this.value + 'px'">
+                </div>
             </div>
         </div>
 
-        <div class="grid-2">
-            <div class="input-group">
-                <label>Posisi Watermark</label>
-                <select id="watermark-position">
-                    <option value="diagonal" selected>Diagonal Tengah (45°)</option>
-                    <option value="center">Horizontal Tengah</option>
-                    <option value="header">Bagian Atas (Header)</option>
-                    <option value="footer">Bagian Bawah (Footer)</option>
-                </select>
+        <!-- SETTING 2: WATERMARK GAMBAR / LOGO / STEMPEL -->
+        <div id="wm-image-settings" style="display: none;">
+            <div id="dropzone-watermark-logo" class="drop-zone" style="padding: 1.2rem 1rem;">
+                Drag &amp; Drop Logo / Gambar Stempel (PNG Transparan / JPG) di sini
             </div>
-            <div class="input-group">
-                <label>Warna Watermark</label>
-                <select id="watermark-color">
-                    <option value="#6b7280" selected>Abu-abu Netral</option>
-                    <option value="#dc2626">Merah</option>
-                    <option value="#2563eb">Biru</option>
-                    <option value="#111827">Hitam</option>
-                    <option value="#ea580c">Oranye</option>
-                </select>
+            <div id="wm-logo-preview-box" style="display: none; align-items: center; gap: 10px; margin-bottom: 1rem; background: #f8fafc; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;">
+                <img id="wm-logo-preview" style="max-height: 40px; max-width: 60px; object-fit: contain; background: white; padding: 2px; border: 1px solid var(--border); border-radius: 4px;" alt="Logo">
+                <div id="wm-logo-info" style="font-size: 0.85rem; font-weight: 500; color: #334155;"></div>
             </div>
-        </div>
 
-        <div class="grid-2">
-            <div class="input-group">
-                <label>Transparansi (Opasitas): <span id="wm-opacity-val" class="range-value">25%</span></label>
-                <input type="range" id="watermark-opacity" min="5" max="90" value="25" oninput="document.getElementById('wm-opacity-val').textContent = this.value + '%'">
+            <div class="grid-2">
+                <div class="input-group">
+                    <label>Posisi Logo / Stempel</label>
+                    <select id="watermark-logo-position">
+                        <option value="center" selected>Tengah Halaman (Watermark)</option>
+                        <option value="bottom-right">Pojok Kanan Bawah (Cap / Tanda Tangan)</option>
+                        <option value="bottom-left">Pojok Kiri Bawah</option>
+                        <option value="top-left">Pojok Kiri Atas (Kop Surat / Logo)</option>
+                        <option value="top-right">Pojok Kanan Atas</option>
+                        <option value="top-center">Atas Tengah</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Ukuran Skala Logo: <span id="wm-logo-scale-val" class="range-value">30%</span></label>
+                    <input type="range" id="watermark-logo-scale" min="10" max="90" value="30" oninput="document.getElementById('wm-logo-scale-val').textContent = this.value + '%'">
+                </div>
             </div>
+
             <div class="input-group">
-                <label>Ukuran Font: <span id="wm-size-val" class="range-value">40px</span></label>
-                <input type="range" id="watermark-size" min="16" max="72" value="40" oninput="document.getElementById('wm-size-val').textContent = this.value + 'px'">
+                <label>Transparansi Logo (Opasitas): <span id="wm-logo-opacity-val" class="range-value">40%</span></label>
+                <input type="range" id="watermark-logo-opacity" min="10" max="100" value="40" oninput="document.getElementById('wm-logo-opacity-val').textContent = this.value + '%'">
             </div>
         </div>
 
@@ -561,6 +624,60 @@
         </div>
 
         <button class="action-btn" onclick="processWatermark()">Terapkan Watermark</button>
+    </div>
+
+    <!-- TAB 7: NOMOR HALAMAN OTOMATIS -->
+    <div id="tab-page-numbers" class="tab-content">
+        <div id="dropzone-page-numbers" class="drop-zone">Drag &amp; Drop 1 File PDF di sini</div>
+        <div id="page-numbers-file-info" class="file-info-badge">Belum ada file terpilih</div>
+
+        <div class="grid-2">
+            <div class="input-group">
+                <label>Format Penomoran</label>
+                <select id="pn-format">
+                    <option value="page-x-of-y" selected>Halaman X dari Y (Contoh: Halaman 1 dari 10)</option>
+                    <option value="number">Hanya Angka (Contoh: 1, 2, 3)</option>
+                    <option value="page-x">Halaman X (Contoh: Halaman 1)</option>
+                    <option value="dash-x-dash">- X - (Contoh: - 1 -)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Posisi Nomor Halaman</label>
+                <select id="pn-position">
+                    <option value="bottom-center" selected>Bawah Tengah (Standar)</option>
+                    <option value="bottom-right">Bawah Kanan</option>
+                    <option value="bottom-left">Bawah Kiri</option>
+                    <option value="top-center">Atas Tengah</option>
+                    <option value="top-right">Atas Kanan</option>
+                    <option value="top-left">Atas Kiri</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="input-group">
+                <label>Mulai Penomoran dari Angka</label>
+                <input type="number" id="pn-start-number" value="1" min="1">
+            </div>
+            <div class="input-group">
+                <label>Ukuran Font</label>
+                <select id="pn-font-size">
+                    <option value="10">10 pt (Kecil)</option>
+                    <option value="11" selected>11 pt (Standar)</option>
+                    <option value="12">12 pt (Sedang)</option>
+                    <option value="14">14 pt (Besar)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="input-group" style="margin-top: 5px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal;">
+                <input type="checkbox" id="pn-skip-first" checked style="width: auto;">
+                <span>Lewati halaman pertama (Jangan beri nomor pada Sampul / Cover)</span>
+            </label>
+        </div>
+
+        <button class="action-btn" onclick="processPageNumbers()">Beri Nomor Halaman &amp; Simpan</button>
     </div>
 
     <!-- TAB 7: PDF KE GAMBAR -->
@@ -668,6 +785,10 @@
     let deleteFile = null;
     let rotateFile = null;
     let watermarkFile = null;
+    let watermarkLogoFile = null;
+    let watermarkLogoDataUrl = null;
+    let watermarkMode = 'text'; // 'text' atau 'image'
+    let pageNumbersFile = null;
     let pdfToImgFile = null;
     let imgToPdfFiles = []; // Array of { file, previewUrl }
     let pdfDocumentsCache = [];
@@ -769,6 +890,14 @@
         };
     }
 
+    // --- HELPER FORMAT UKURAN FILE ---
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
     // --- HELPER DOWNLOAD FILE ---
     function downloadFile(content, filename, mimeType = 'application/pdf') {
         const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
@@ -794,7 +923,9 @@
         compressFile = files[0];
         const bytes = await compressFile.arrayBuffer();
         const doc = await PDFLib.PDFDocument.load(bytes);
-        document.getElementById('compress-file-info').textContent = `File aktif: ${compressFile.name} (${doc.getPageCount()} Halaman)`;
+        document.getElementById('compress-file-info').textContent = `File aktif: ${compressFile.name} (${doc.getPageCount()} Halaman - ${formatFileSize(compressFile.size)})`;
+        const resBox = document.getElementById('compress-result-box');
+        if (resBox) resBox.style.display = 'none';
     });
 
     setupDropZone('dropzone-delete', false, async files => {
@@ -818,6 +949,25 @@
         const bytes = await watermarkFile.arrayBuffer();
         const doc = await PDFLib.PDFDocument.load(bytes);
         document.getElementById('watermark-file-info').textContent = `File aktif: ${watermarkFile.name} (Total ${doc.getPageCount()} Halaman)`;
+    });
+
+    setupDropZone('dropzone-watermark-logo', false, files => {
+        watermarkLogoFile = files[0];
+        const reader = new FileReader();
+        reader.onload = e => {
+            watermarkLogoDataUrl = e.target.result;
+            document.getElementById('wm-logo-preview').src = watermarkLogoDataUrl;
+            document.getElementById('wm-logo-preview-box').style.display = 'flex';
+            document.getElementById('wm-logo-info').textContent = `${watermarkLogoFile.name} (${(watermarkLogoFile.size/1024).toFixed(1)} KB)`;
+        };
+        reader.readAsDataURL(watermarkLogoFile);
+    }, 'image/*');
+
+    setupDropZone('dropzone-page-numbers', false, async files => {
+        pageNumbersFile = files[0];
+        const bytes = await pageNumbersFile.arrayBuffer();
+        const doc = await PDFLib.PDFDocument.load(bytes);
+        document.getElementById('page-numbers-file-info').textContent = `File aktif: ${pageNumbersFile.name} (Total ${doc.getPageCount()} Halaman)`;
     });
 
     setupDropZone('dropzone-pdf-to-img', false, async files => {
@@ -1003,6 +1153,26 @@
             progressBar.style.width = '100%';
             progressText.textContent = "Menyimpan file hasil kompresi...";
             const pdfBytes = await newPdf.save();
+            
+            // Hitung Penghematan Ukuran
+            const initialBytes = compressFile.size;
+            const finalBytes = pdfBytes.length;
+            const savedBytes = initialBytes - finalBytes;
+            const savedPercent = Math.round((savedBytes / initialBytes) * 100);
+
+            const resultBox = document.getElementById('compress-result-box');
+            document.getElementById('comp-size-before').textContent = formatFileSize(initialBytes);
+            document.getElementById('comp-size-after').textContent = formatFileSize(finalBytes);
+            const badge = document.getElementById('comp-saved-badge');
+            if (savedPercent > 0) {
+                badge.textContent = `Hemat ${savedPercent}%`;
+                badge.style.backgroundColor = '#10b981';
+            } else {
+                badge.textContent = `+${Math.abs(savedPercent)}% (Ukuran Naik)`;
+                badge.style.backgroundColor = '#6b7280';
+            }
+            resultBox.style.display = 'block';
+
             downloadFile(pdfBytes, `Compressed_${compressFile.name}`);
         } catch (error) {
             console.error(error);
@@ -1087,57 +1257,230 @@
         }
     }
 
-    // --- TAB 6: WATERMARK TEKS LOGIC ---
+    // --- TAB 6: WATERMARK TEKS & LOGO LOGIC ---
     function setWatermarkPreset(text) {
         document.getElementById('watermark-text').value = text;
     }
 
+    function switchWatermarkMode(mode) {
+        watermarkMode = mode;
+        const btnText = document.getElementById('btn-wm-type-text');
+        const btnImg = document.getElementById('btn-wm-type-image');
+        const boxText = document.getElementById('wm-text-settings');
+        const boxImg = document.getElementById('wm-image-settings');
+
+        if (mode === 'text') {
+            btnText.style.background = 'var(--primary)';
+            btnText.style.color = '#ffffff';
+            btnImg.style.background = '#e2e8f0';
+            btnImg.style.color = '#475569';
+            boxText.style.display = 'block';
+            boxImg.style.display = 'none';
+        } else {
+            btnImg.style.background = 'var(--primary)';
+            btnImg.style.color = '#ffffff';
+            btnText.style.background = '#e2e8f0';
+            btnText.style.color = '#475569';
+            boxText.style.display = 'none';
+            boxImg.style.display = 'block';
+        }
+    }
+
     async function processWatermark() {
         if (!watermarkFile) return alert('Silakan pilih file PDF terlebih dahulu.');
-        const text = document.getElementById('watermark-text').value.trim();
-        if (!text) return alert('Silakan masukkan teks watermark.');
-
-        const position = document.getElementById('watermark-position').value;
-        const colorHex = document.getElementById('watermark-color').value;
-        const opacity = parseInt(document.getElementById('watermark-opacity').value, 10) / 100;
-        const fontSize = parseInt(document.getElementById('watermark-size').value, 10);
         const range = document.getElementById('watermark-range').value;
 
         try {
             const bytes = await watermarkFile.arrayBuffer();
             const pdfDoc = await PDFLib.PDFDocument.load(bytes);
-            const font = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
             const totalPages = pdfDoc.getPageCount();
-            const rgb = hexToRgb(colorHex);
-
             const targetIndices = parsePageRange(range, totalPages, true);
 
-            targetIndices.forEach(idx => {
-                const page = pdfDoc.getPage(idx);
+            if (watermarkMode === 'text') {
+                const text = document.getElementById('watermark-text').value.trim();
+                if (!text) return alert('Silakan masukkan teks watermark.');
+
+                const position = document.getElementById('watermark-position').value;
+                const colorHex = document.getElementById('watermark-color').value;
+                const opacity = parseInt(document.getElementById('watermark-opacity').value, 10) / 100;
+                const fontSize = parseInt(document.getElementById('watermark-size').value, 10);
+                const font = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+                const rgb = hexToRgb(colorHex);
+
+                targetIndices.forEach(idx => {
+                    const page = pdfDoc.getPage(idx);
+                    const { width, height } = page.getSize();
+                    const textWidth = font.widthOfTextAtSize(text, fontSize);
+                    const textHeight = font.heightAtSize(fontSize);
+
+                    let x = 0, y = 0, angle = 0;
+
+                    if (position === 'diagonal') {
+                        angle = 45;
+                        const rad = 45 * Math.PI / 180;
+                        x = (width / 2) - ((textWidth / 2) * Math.cos(rad) - (textHeight / 2) * Math.sin(rad));
+                        y = (height / 2) - ((textWidth / 2) * Math.sin(rad) + (textHeight / 2) * Math.cos(rad));
+                    } else if (position === 'center') {
+                        angle = 0;
+                        x = (width - textWidth) / 2;
+                        y = (height - textHeight) / 2;
+                    } else if (position === 'header') {
+                        angle = 0;
+                        x = (width - textWidth) / 2;
+                        y = height - 45 - textHeight;
+                    } else if (position === 'footer') {
+                        angle = 0;
+                        x = (width - textWidth) / 2;
+                        y = 35;
+                    }
+
+                    page.drawText(text, {
+                        x,
+                        y,
+                        size: fontSize,
+                        font,
+                        color: PDFLib.rgb(rgb.r, rgb.g, rgb.b),
+                        opacity,
+                        rotate: PDFLib.degrees(angle)
+                    });
+                });
+
+                downloadFile(await pdfDoc.save(), `WatermarkTeks_${watermarkFile.name}`);
+
+            } else {
+                // Mode Gambar / Logo
+                if (!watermarkLogoDataUrl) return alert('Silakan masukkan file logo / gambar stempel terlebih dahulu.');
+
+                const logoPosition = document.getElementById('watermark-logo-position').value;
+                const scalePercent = parseInt(document.getElementById('watermark-logo-scale').value, 10) / 100;
+                const logoOpacity = parseInt(document.getElementById('watermark-logo-opacity').value, 10) / 100;
+
+                const imgElement = new Image();
+                imgElement.src = watermarkLogoDataUrl;
+                await new Promise((res, rej) => { imgElement.onload = res; imgElement.onerror = rej; });
+
+                const canvas = document.createElement('canvas');
+                canvas.width = imgElement.naturalWidth;
+                canvas.height = imgElement.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(imgElement, 0, 0);
+
+                const pngDataUrl = canvas.toDataURL('image/png');
+                const pngResponse = await fetch(pngDataUrl);
+                const pngBytes = await pngResponse.arrayBuffer();
+                const embeddedLogo = await pdfDoc.embedPng(pngBytes);
+
+                targetIndices.forEach(idx => {
+                    const page = pdfDoc.getPage(idx);
+                    const { width, height } = page.getSize();
+
+                    const targetW = width * scalePercent;
+                    const targetH = targetW * (embeddedLogo.height / embeddedLogo.width);
+
+                    let x = 0, y = 0;
+                    const margin = 40;
+
+                    if (logoPosition === 'center') {
+                        x = (width - targetW) / 2;
+                        y = (height - targetH) / 2;
+                    } else if (logoPosition === 'bottom-right') {
+                        x = width - targetW - margin;
+                        y = margin;
+                    } else if (logoPosition === 'bottom-left') {
+                        x = margin;
+                        y = margin;
+                    } else if (logoPosition === 'top-left') {
+                        x = margin;
+                        y = height - targetH - margin;
+                    } else if (logoPosition === 'top-right') {
+                        x = width - targetW - margin;
+                        y = height - targetH - margin;
+                    } else if (logoPosition === 'top-center') {
+                        x = (width - targetW) / 2;
+                        y = height - targetH - margin;
+                    }
+
+                    page.drawImage(embeddedLogo, {
+                        x,
+                        y,
+                        width: targetW,
+                        height: targetH,
+                        opacity: logoOpacity
+                    });
+                });
+
+                downloadFile(await pdfDoc.save(), `WatermarkLogo_${watermarkFile.name}`);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Gagal menerapkan watermark: ' + e.message);
+        }
+    }
+
+    // --- TAB 7: NOMOR HALAMAN LOGIC ---
+    async function processPageNumbers() {
+        if (!pageNumbersFile) return alert('Silakan pilih file PDF terlebih dahulu.');
+
+        const format = document.getElementById('pn-format').value;
+        const position = document.getElementById('pn-position').value;
+        const startNumber = parseInt(document.getElementById('pn-start-number').value, 10) || 1;
+        const fontSize = parseInt(document.getElementById('pn-font-size').value, 10) || 11;
+        const skipFirst = document.getElementById('pn-skip-first').checked;
+
+        const btn = event.target;
+        btn.disabled = true;
+        btn.textContent = 'Menomori Halaman...';
+
+        try {
+            const bytes = await pageNumbersFile.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(bytes);
+            const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+            const totalPages = pdfDoc.getPageCount();
+
+            for (let i = 0; i < totalPages; i++) {
+                if (skipFirst && i === 0) continue;
+
+                const page = pdfDoc.getPage(i);
                 const { width, height } = page.getSize();
+                
+                const currentNumber = startNumber + (skipFirst ? (i - 1) : i);
+                const totalDisplay = skipFirst ? (totalPages - 1) : totalPages;
+
+                let text = '';
+                if (format === 'page-x-of-y') {
+                    text = `Halaman ${currentNumber} dari ${totalDisplay}`;
+                } else if (format === 'number') {
+                    text = `${currentNumber}`;
+                } else if (format === 'page-x') {
+                    text = `Halaman ${currentNumber}`;
+                } else if (format === 'dash-x-dash') {
+                    text = `- ${currentNumber} -`;
+                }
+
                 const textWidth = font.widthOfTextAtSize(text, fontSize);
                 const textHeight = font.heightAtSize(fontSize);
 
-                let x = 0, y = 0, angle = 0;
+                let x = 0, y = 0;
+                const margin = 36;
 
-                if (position === 'diagonal') {
-                    angle = 45;
-                    const rad = 45 * Math.PI / 180;
-                    // Rumus geometri penempatan teks tengah pada rotasi 45 derajat
-                    x = (width / 2) - ((textWidth / 2) * Math.cos(rad) - (textHeight / 2) * Math.sin(rad));
-                    y = (height / 2) - ((textWidth / 2) * Math.sin(rad) + (textHeight / 2) * Math.cos(rad));
-                } else if (position === 'center') {
-                    angle = 0;
+                if (position === 'bottom-center') {
                     x = (width - textWidth) / 2;
-                    y = (height - textHeight) / 2;
-                } else if (position === 'header') {
-                    angle = 0;
+                    y = 25;
+                } else if (position === 'bottom-right') {
+                    x = width - textWidth - margin;
+                    y = 25;
+                } else if (position === 'bottom-left') {
+                    x = margin;
+                    y = 25;
+                } else if (position === 'top-center') {
                     x = (width - textWidth) / 2;
-                    y = height - 45 - textHeight;
-                } else if (position === 'footer') {
-                    angle = 0;
-                    x = (width - textWidth) / 2;
-                    y = 35;
+                    y = height - 35;
+                } else if (position === 'top-right') {
+                    x = width - textWidth - margin;
+                    y = height - 35;
+                } else if (position === 'top-left') {
+                    x = margin;
+                    y = height - 35;
                 }
 
                 page.drawText(text, {
@@ -1145,15 +1488,18 @@
                     y,
                     size: fontSize,
                     font,
-                    color: PDFLib.rgb(rgb.r, rgb.g, rgb.b),
-                    opacity,
-                    rotate: PDFLib.degrees(angle)
+                    color: PDFLib.rgb(0.25, 0.25, 0.25),
+                    opacity: 0.85
                 });
-            });
+            }
 
-            downloadFile(await pdfDoc.save(), `Watermark_${watermarkFile.name}`);
+            downloadFile(await pdfDoc.save(), `NomorHalaman_${pageNumbersFile.name}`);
         } catch (e) {
-            alert('Gagal menerapkan watermark: ' + e.message);
+            console.error(e);
+            alert('Gagal memberi nomor halaman: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Beri Nomor Halaman & Simpan';
         }
     }
 
